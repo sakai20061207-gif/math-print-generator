@@ -1,0 +1,4 @@
+texlive-luatex
+texlive-lang-japanese
+texlive-latex-base
+texlive-latex-recommended
