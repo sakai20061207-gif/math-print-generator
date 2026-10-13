@@ -1,140 +1,133 @@
-import base64
-import json
+import io
 import os
-import random
 import subprocess
+import tempfile
+import fitz  # PyMuPDF
+from PIL import Image
 import streamlit as st
 
-st.title("数理科学 問題プリント自動生成ツール")
-
-# ==========================================
-# 🔒 パスワード認証ブロック
-# ==========================================
-if "authenticated" not in st.session_state:
-  st.session_state.authenticated = False
-
-if not st.session_state.authenticated:
-  st.subheader("🔒 ログイン認証")
-  st.markdown("このツールを利用するにはパスワードが必要です。")
-
-  # パスワード入力欄（文字が隠れる設定）
-  password_input = st.text_input(
-      "パスワードを入力してください", type="password"
-  )
-
-  if st.button("ログイン"):
-    # ▼▼▼ ここの "Inkimath" がパスワードになります（自由に変更できます） ▼▼▼
-    if password_input == "Inkimath":
-      st.session_state.authenticated = True
-      st.rerun()  # 画面を再読み込みしてメイン画面に進む
-    else:
-      st.error("❌ パスワードが間違っています。")
-
-  # 認証されるまで、ここでプログラムを停止（これより下は表示されない）
-  st.stop()
-# ==========================================
-
-
-# --- 以下は従来のメイン処理 ---
-
-
-# 1. 外部のJSONファイルから問題データを読み込む関数
-def load_questions():
-  if os.path.exists("questions.json"):
-    with open("questions.json", "r", encoding="utf-8") as f:
-      return json.load(f)
-  else:
-    return {
-        "サンプル単元": [{
-            "question": "ファイルが見つかりません",
-            "answer": "-",
-        }]
-    }
-
-
-question_bank = load_questions()
-
-# 2. 条件選択
-st.header("1. プリント条件の設定")
-selected_unit = st.selectbox("単元を選択してください", list(question_bank.keys()))
-max_q = len(question_bank[selected_unit])
-num_questions = st.slider(
-    "出題数を選択", min_value=1, max_value=max_q, value=min(2, max_q)
+# ページの基本設定
+st.set_page_config(
+    page_title="Math Print Generator", page_icon="数学", layout="wide"
 )
 
-# 3. プリント生成ボタン
-if st.button("PDFプリントを自動生成する"):
-  with st.spinner("TeXをコンパイルしてPDFを作成中..."):
-    # 選ばれた問題をランダム抽出
-    unit_questions = question_bank[selected_unit]
-    selected = random.sample(unit_questions, num_questions)
-
-    # TeXコードのボディを組み立て
-    tex_body = ""
-    for i, q in enumerate(selected, 1):
-      tex_body += f"\\item {q['question']}\n\n"
-
-    full_tex_code = f"""\\documentclass[a4paper,11pt]{{ltjsarticle}}
-\\usepackage{{luatexja}}
-\\usepackage{{amsmath,amssymb}}
-
-\\begin{{document}}
-
-\\section*{{{selected_unit} 演習プリント}}
-\\begin{{enumerate}}
-{tex_body}\\end{{enumerate}}
-
-\\end{{document}}
-"""
-
-    # 一時ファイルのファイル名
-    tex_filename = "output.tex"
-    pdf_filename = "output.pdf"
-
-    # .texファイルを書き出す
-    with open(tex_filename, "w", encoding="utf-8") as f:
-      f.write(full_tex_code)
-
+# ---------------------------------------------------------
+# PDFプレビュー表示関数 (PyMuPDF使用・Chromeブロック回避)
+# ---------------------------------------------------------
+def render_pdf_preview(pdf_bytes: bytes):
+    """PDFのバイナリデータを受け取り、全ページを画像に変換してプレビュー表示する"""
     try:
-      # Pythonから lualatex コマンドを呼び出して自動コンパイル
-      result = subprocess.run(
-          ["lualatex", "-interaction=nonstopmode", tex_filename],
-          capture_output=True,
-          text=True,
-          encoding="utf-8",
-      )
+        doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+        st.markdown(f"### 📄 プレビュー画面 (全 {len(doc)} ページ)")
 
-      # コンパイルが成功し、PDFが生成されているか確認
-      if result.returncode == 0 and os.path.exists(pdf_filename):
-        st.success("✨ PDFの自動生成に成功しました！")
+        for page_num in range(len(doc)):
+            page = doc.load_page(page_num)
+            # dpiを150に設定して数式や文字をくっきり綺麗に表示
+            pix = page.get_pixmap(dpi=150)
+            img = Image.open(io.BytesIO(pix.tobytes("png")))
 
-        # PDFをバイナリとして読み込む
-        with open(pdf_filename, "rb") as pdf_file:
-          pdf_bytes = pdf_file.read()
-
-        # ダウンロードボタン
-        st.download_button(
-            label="📥 完成PDFをダウンロード",
-            data=pdf_bytes,
-            file_name=f"{selected_unit}_print.pdf",
-            mime="application/pdf",
-        )
-
-        # 画面上にPDFプレビューを表示
-        base64_pdf = base64.b64encode(pdf_bytes).decode("utf-8")
-        pdf_display = f'<iframe src="data:application/pdf;base64,{base64_pdf}" width="100%" height="700px" type="application/pdf"></iframe>'
-
-        st.markdown("### 📄 プレビュー画面")
-        st.markdown(pdf_display, unsafe_allow_html=True)
-
-      else:
-        st.error(
-            "❌ TeXのコンパイル中にエラーが発生しました。ログを確認してください。"
-        )
-        st.code(result.stdout)
+            st.image(
+                img, caption=f"第 {page_num + 1} ページ", use_container_width=True
+            )
+            st.markdown("---")
 
     except Exception as e:
-      st.error(
-          f"システムエラー: `lualatex` コマンドが見つからないか、実行できません。"
-          f" 詳細: {e}"
-      )
+        st.error(f"PDFのプレビュー表示に失敗しました: {e}")
+
+
+# ---------------------------------------------------------
+# LaTeXコンパイル関数
+# ---------------------------------------------------------
+def compile_latex_to_pdf(latex_code: str) -> bytes:
+    """LaTeXのソースコードからPDFをコンパイルしてバイナリを返す"""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tex_path = os.path.join(tmpdir, "output.tex")
+        with open(tex_path, "w", encoding="utf-8") as f:
+            f.write(latex_code)
+
+        try:
+            subprocess.run(
+                ["lualatex", "-interaction=nonstopmode", "output.tex"],
+                cwd=tmpdir,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=True,
+            )
+            pdf_path = os.path.join(tmpdir, "output.pdf")
+            if os.path.exists(pdf_path):
+                with open(pdf_path, "rb") as f:
+                    return f.read()
+        except subprocess.CalledProcessError as e:
+            st.error("LaTeXのコンパイルエラーが発生しました。")
+            log_path = os.path.join(tmpdir, "output.log")
+            if os.path.exists(log_path):
+                with open(log_path, "r", encoding="utf-8", errors="ignore") as log_f:
+                    st.text_area("コンパイルログ", log_f.read(), height=200)
+            raise e
+
+    return b""
+
+
+# ---------------------------------------------------------
+# メイン画面のUI
+# ---------------------------------------------------------
+st.title("📐 数学問題プリントジェネレーター")
+st.write("LaTeXを用いた美しい数学プリントを生成・プレビューできます。")
+
+# サイドバーの設定
+st.sidebar.header("プリント設定")
+print_title = st.sidebar.text_input("プリントタイトル", "演習問題プリント")
+problem_type = st.sidebar.selectbox(
+    "単元・テーマの選択",
+    ["微積分 (Real Analysis)", "線形代数 (Linear Algebra)", "図形と方程式 (Geometry)"],
+)
+num_questions = st.sidebar.slider("問題数", 1, 5, 3)
+
+# プリント生成ボタン
+if st.sidebar.button("プリントを生成する"):
+    # LaTeXコードの組み立て
+    latex_source = f"""
+    \\documentclass[11pt,a4paper]{{ltjsarticle}}
+    \\usepackage{{amsmath,amssymb,amsthm}}
+    \\usepackage{{tcolorbox}}
+    \\begin{{document}}
+    \\begin{{center}}
+        {{\\Large \\textbf{{{print_title}}}}}
+    \\end{{center}}
+    \\vspace{{1em}}
+    \\noindent \\textbf{{単元: {problem_type}}} \\hfill \\textbf{{氏名: \\underline{{\\hspace{{5cm}}}}}}
+    \\vspace{{1.5em}}
+    """
+
+    for i in range(1, num_questions + 1):
+        latex_source += f"""
+        \\begin{{tcolorbox}}[colback=white,colframe=blue!50!black,title={{問題 {i}}}]
+        関数 $f(x) = x^3 - 3x$ の極値を求めよ。また、グラフの概形を描け。
+        \\end{{tcolorbox}}
+        \\vspace{{1em}}
+        """
+
+    latex_source += """
+    \\end{document}
+    """
+
+    with st.spinner("PDFをコンパイル中..."):
+        try:
+            pdf_data = compile_latex_to_pdf(latex_source)
+            st.session_state["pdf_data"] = pdf_data
+            st.success("✨ プリントの生成が完了しました！")
+        except Exception:
+            st.error("PDFの生成に失敗しました。")
+
+# 生成されたPDFがある場合の表示
+if "pdf_data" in st.session_state:
+    # 1. 画像として画面内にプレビュー表示（ブロックを完全に回避）
+    render_pdf_preview(st.session_state["pdf_data"])
+
+    # 2. ダウンロードボタン
+    st.download_button(
+        label="📥 生成されたPDFをダウンロード",
+        data=st.session_state["pdf_data"],
+        file_name="math_print.pdf",
+        mime="application/pdf",
+    )
