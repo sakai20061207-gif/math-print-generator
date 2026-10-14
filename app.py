@@ -357,7 +357,7 @@ def render_pdf_preview_and_print(pdf_bytes: bytes):
         </style>
     </head>
     <body>
-        <button class="print-btn" onclick="openPrintWindow()">🖨️ このまま印刷する（ワンクリック）</button>
+        <button class="print-btn" onclick="openPrintWindow()">🖨️印刷</button>
         <script>
             function openPrintWindow() {{
                 const pdfData = "{base64_pdf}";
