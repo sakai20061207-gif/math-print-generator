@@ -325,13 +325,12 @@ question_database = {
 
 
 # ---------------------------------------------------------
-# PDFプレビュー & 印刷機能（安全な画像レンダリング方式）
+# PDFプレビュー & 印刷機能
 # ---------------------------------------------------------
 def render_pdf_preview_and_print(pdf_bytes: bytes):
     """全ページを綺麗に画像化して縦に並べ、ワンクリック印刷ボタンを配置する"""
     base64_pdf = base64.b64encode(pdf_bytes).decode("utf-8")
 
-    # ワンクリックで印刷ウィンドウを立ち上げるボタンのHTML
     print_html = f"""
     <!DOCTYPE html>
     <html>
@@ -386,7 +385,6 @@ def render_pdf_preview_and_print(pdf_bytes: bytes):
     components.html(print_html, height=65)
     st.markdown("---")
 
-    # PyMuPDFで全ページを画像に変換して縦に並べて表示（真っ黒になるトラブルを防止）
     try:
         doc = fitz.open(stream=pdf_bytes, filetype="pdf")
         for page_num in range(len(doc)):
@@ -479,10 +477,12 @@ if st.sidebar.button("プリントを生成する"):
     )
 
     for i, q_text in enumerate(selected_questions, start=1):
+        # 修正点：(1)の形式にし、\begin{samepage} で問題の途中でのページ分断を防止
         latex_source += f"""
-        \\noindent \\textbf{{[問題 {i}]}} \\\\
-        {q_text}
+        \\begin{{samepage}}
+        \\noindent \\textbf{{({i})}} {q_text}
         \\vspace{{1.5em}}
+        \\end{{samepage}}
         """
 
     latex_source += """
@@ -499,7 +499,7 @@ if st.sidebar.button("プリントを生成する"):
 
 # 生成されたPDFがある場合の表示
 if "pdf_data" in st.session_state:
-    # 1. すべてのページが1つにまとまったPDFのプレビュー表示 ＆ 印刷ボタン
+    # 1. プレビュー表示 ＆ ワンクリック印刷ボタン
     render_pdf_preview_and_print(st.session_state["pdf_data"])
 
     # 2. ダウンロードボタン（バックアップ用）
