@@ -4,6 +4,8 @@ import os
 import random
 import subprocess
 import tempfile
+import fitz  # PyMuPDF
+from PIL import Image
 import streamlit as st
 import streamlit.components.v1 as components
 
@@ -323,24 +325,19 @@ question_database = {
 
 
 # ---------------------------------------------------------
-# PDFプレビュー＆ワンクリック印刷機能（統合型）
+# PDFプレビュー & 印刷機能（安全な画像レンダリング方式）
 # ---------------------------------------------------------
-def render_pdf_with_print_button(pdf_bytes: bytes):
-    """1つのPDFとして表示し、専用のワンクリック印刷ボタンを配置する"""
+def render_pdf_preview_and_print(pdf_bytes: bytes):
+    """全ページを綺麗に画像化して縦に並べ、ワンクリック印刷ボタンを配置する"""
     base64_pdf = base64.b64encode(pdf_bytes).decode("utf-8")
 
-    html_code = f"""
+    # ワンクリックで印刷ウィンドウを立ち上げるボタンのHTML
+    print_html = f"""
     <!DOCTYPE html>
     <html>
     <head>
         <meta charset="utf-8">
         <style>
-            .container {{
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                width: 100%;
-            }}
             .print-btn {{
                 background-color: #ff4b4b;
                 color: white;
@@ -350,56 +347,62 @@ def render_pdf_with_print_button(pdf_bytes: bytes):
                 font-weight: bold;
                 border-radius: 8px;
                 cursor: pointer;
-                margin-bottom: 15px;
                 box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-                transition: background 0.2s;
+                width: 100%;
+                text-align: center;
+                font-family: sans-serif;
             }}
             .print-btn:hover {{
                 background-color: #ff2222;
             }}
-            embed {{
-                width: 100%;
-                height: 650px;
-                border: 1px solid #ddd;
-                border-radius: 6px;
-            }}
         </style>
     </head>
     <body>
-        <div class="container">
-            <button class="print-btn" onclick="printPDF()">🖨️ このまま印刷する（ワンクリック）</button>
-            <embed id="pdfEmbed" src="data:application/pdf;base64,{base64_pdf}" type="application/pdf" />
-        </div>
-
+        <button class="print-btn" onclick="openPrintWindow()">🖨️ このまま印刷する（ワンクリック）</button>
         <script>
-            function printPDF() {{
-                const embed = document.getElementById('pdfEmbed');
-                try {{
-                    embed.contentWindow.print();
-                }} catch (e) {{
-                    const pdfData = "{base64_pdf}";
-                    const byteCharacters = atob(pdfData);
-                    const byteNumbers = new Array(byteCharacters.length);
-                    for (let i = 0; i < byteCharacters.length; i++) {{
-                        byteNumbers[i] = byteCharacters.charCodeAt(i);
-                    }}
-                    const byteArray = new Uint8Array(byteNumbers);
-                    const blob = new Blob([byteArray], {{type: 'application/pdf'}});
-                    const blobUrl = URL.createObjectURL(blob);
-                    const printWindow = window.open(blobUrl, '_blank');
-                    if (printWindow) {{
-                        printWindow.onload = function() {{
-                            printWindow.print();
-                        }};
-                    }}
+            function openPrintWindow() {{
+                const pdfData = "{base64_pdf}";
+                const byteCharacters = atob(pdfData);
+                const byteNumbers = new Array(byteCharacters.length);
+                for (let i = 0; i < byteCharacters.length; i++) {{
+                    byteNumbers[i] = byteCharacters.charCodeAt(i);
+                }}
+                const byteArray = new Uint8Array(byteNumbers);
+                const blob = new Blob([byteArray], {{type: 'application/pdf'}});
+                const blobUrl = URL.createObjectURL(blob);
+                const printWindow = window.open(blobUrl, '_blank');
+                if (printWindow) {{
+                    printWindow.onload = function() {{
+                        printWindow.print();
+                    }};
                 }}
             }}
         </script>
     </body>
     </html>
     """
-    st.markdown("### 📄 PDFプレビュー & 印刷")
-    components.html(html_code, height=730)
+
+    st.markdown("### 📄 プレビュー & 印刷")
+    components.html(print_html, height=65)
+    st.markdown("---")
+
+    # PyMuPDFで全ページを画像に変換して縦に並べて表示（真っ黒になるトラブルを防止）
+    try:
+        doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+        for page_num in range(len(doc)):
+            page = doc.load_page(page_num)
+            pix = page.get_pixmap(dpi=150)
+            img = Image.open(io.BytesIO(pix.tobytes("png")))
+
+            st.image(
+                img,
+                caption=f"第 {page_num + 1} / {len(doc)} ページ",
+                use_container_width=True,
+            )
+            if page_num < len(doc) - 1:
+                st.markdown("---")
+    except Exception as e:
+        st.error(f"プレビューの生成に失敗しました: {e}")
 
 
 # ---------------------------------------------------------
@@ -496,8 +499,8 @@ if st.sidebar.button("プリントを生成する"):
 
 # 生成されたPDFがある場合の表示
 if "pdf_data" in st.session_state:
-    # 1. 1つのPDFとしてプレビュー表示し、ワンクリック印刷ボタンを配置
-    render_pdf_with_print_button(st.session_state["pdf_data"])
+    # 1. すべてのページが1つにまとまったPDFのプレビュー表示 ＆ 印刷ボタン
+    render_pdf_preview_and_print(st.session_state["pdf_data"])
 
     # 2. ダウンロードボタン（バックアップ用）
     st.download_button(
