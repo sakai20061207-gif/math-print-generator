@@ -1,5 +1,6 @@
 import io
 import os
+import random  # ランダム選択のためにインポートを追加
 import subprocess
 import tempfile
 import fitz  # PyMuPDF
@@ -381,7 +382,7 @@ def compile_latex_to_pdf(latex_code: str) -> bytes:
 # メイン画面のUI
 # ---------------------------------------------------------
 st.title("📐 数学問題プリントジェネレーター")
-st.write("追加した単元や大量の問題から、お好みのプリントを生成・プレビューできます。")
+st.write("ランダムに問題が選ばれるオリジナル演習プリントを生成できます。")
 
 # サイドバーの設定
 st.sidebar.header("プリント設定")
@@ -412,8 +413,10 @@ if st.sidebar.button("プリントを生成する"):
     \\vspace{{1em}}
     """
 
-    # 選択された単元の問題リストから、指定された数だけ取り出す
-    selected_questions = question_database[problem_type][:num_questions]
+    # 変更点：先頭からではなく、指定された数だけランダムに問題を取り出す
+    selected_questions = random.sample(
+        question_database[problem_type], num_questions
+    )
 
     for i, q_text in enumerate(selected_questions, start=1):
         latex_source += f"""
