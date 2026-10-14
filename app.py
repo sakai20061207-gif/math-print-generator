@@ -381,7 +381,7 @@ def render_pdf_preview_and_print(pdf_bytes: bytes):
     </html>
     """
 
-    st.markdown("### 📄 プレビュー & 印刷")
+    st.markdown("プレビュー & 印刷")
     components.html(print_html, height=65)
     st.markdown("---")
 
@@ -439,7 +439,7 @@ def compile_latex_to_pdf(latex_code: str) -> bytes:
 # ---------------------------------------------------------
 # メイン画面のUI
 # ---------------------------------------------------------
-st.title("📐 数学問題プリントジェネレーター")
+st.title("数学のガチャ")
 st.write("ランダムに問題が選ばれるオリジナル演習プリントを生成できます。")
 
 # サイドバーの設定
@@ -493,7 +493,7 @@ if st.sidebar.button("プリントを生成する"):
         try:
             pdf_data = compile_latex_to_pdf(latex_source)
             st.session_state["pdf_data"] = pdf_data
-            st.success("✨ プリントの生成が完了しました！")
+            st.success("プリントの生成が完了しました！")
         except Exception:
             st.error("PDFの生成に失敗しました。")
 
@@ -504,7 +504,7 @@ if "pdf_data" in st.session_state:
 
     # 2. ダウンロードボタン（バックアップ用）
     st.download_button(
-        label="📥 生成されたPDFをダウンロード",
+        label="生成されたPDFをダウンロード",
         data=st.session_state["pdf_data"],
         file_name="math_print.pdf",
         mime="application/pdf",
