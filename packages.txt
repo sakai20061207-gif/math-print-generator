@@ -1,1 +1,3 @@
+texlive-lang-japanese
+texlive-luatex
 texlive-latex-extra
