@@ -1,9 +1,10 @@
-import base64
 import io
 import os
 import random
 import subprocess
 import tempfile
+import fitz  # PyMuPDF
+from PIL import Image
 import streamlit as st
 
 # ページの基本設定
@@ -237,7 +238,7 @@ question_database = {
         "$0 \\leqq x \\leqq 2\\pi$ とし，$f(x) = |\\sin 2x - 2\\sin x - 2\\cos x + 1|$ とする。方程式 $f(x) = k$ の異なる実数解の個数を $k$ の値で場合分けをして求めよ。（近畿大学）",
         "$f(\\theta) = \\frac{1}{\\sqrt{2}}\\sin 2\\theta - \\sin \\theta + \\cos \\theta$ ($0 \\leqq \\theta \\leqq \\pi$) とする。① $f(\\theta)$ の最大値，最小値とそのときの $\\theta$ の値を求めよ。② $f(\\theta) = a$ となる $\\theta$ がちょうど2個存在するような $a$ の値の範囲を求めよ。（北海道大学）",
         "$0 \\leqq \\alpha \\leqq \\pi, 0 \\leqq \\beta \\leqq \\pi, \\alpha < \\beta$ であり，$\\begin{cases} \\cos 2\\alpha - \\cos 2\\beta = \\frac{4}{15} \\\\ \\cos \\alpha \\cos \\beta = -\\frac{2\\sqrt{15}}{15} \\\\ |\\cos \\alpha| \\geqq |\\cos \\beta| \\end{cases}$ を満たすとき，$\\cos \\alpha, \\cos \\beta$ の値をそれぞれ求めよ。（センター試験）",
-        "$0 < x < 2\\pi$ のとき，方程式 방정式 $\\sin 5x = \\sin x$ を解け。（京都工芸繊維大学）",
+        "$0 < x < 2\\pi$ のとき，方程式 $\\sin 5x = \\sin x$ を解け。（京都工芸繊維大学）",
         "$0 \\leqq x \\leqq \\pi$ のとき，方程式 $\\sin x + \\sin 2x + \\sin 3x = \\cos x + \\cos 2x + \\cos 3x$ を解け。（宮崎大学）",
         "次の問いに答えよ。① $\\sin \\frac{2\\pi}{5} = \\sin \\frac{3\\pi}{5}$ に着目して，$\\cos \\frac{\\pi}{5}$ と $\\sin \\frac{\\pi}{5}$ の値を求めよ。② $\\sin \\frac{\\pi}{5} \\sin \\frac{2\\pi}{5} \\sin \\frac{3\\pi}{5} \\sin \\frac{4\\pi}{5}$ の値を求めよ。（中央大学）",
         "$a = \\cos \\frac{2}{7}\\pi + \\cos \\frac{4}{7}\\pi + \\cos \\frac{6}{7}\\pi, b = \\cos \\frac{2}{7}\\pi \\cos \\frac{4}{7}\\pi \\cos \\frac{6}{7}\\pi$ の値を求めよ。① $\\cos 3\\theta = \\cos 4\\theta$ を満たすとき，解の1つが $\\cos \\theta$ であるような4次の方程式を作れ。② $a, b$ の値を求めよ。（東京慈恵会医科大学）",
@@ -322,18 +323,31 @@ question_database = {
 
 
 # ---------------------------------------------------------
-# PDFプレビュー表示関数（iframeによるインライン表示・印刷対応）
+# PDFプレビュー表示関数（PyMuPDFで全ページを綺麗に画像化して縦に並べる）
 # ---------------------------------------------------------
 def render_pdf_preview(pdf_bytes: bytes):
-    """PDFをBase64化してブラウザのPDFビューアでインライン表示する（複数ページ対応・その場で印刷可能）"""
-    base64_pdf = base64.b64encode(pdf_bytes).decode("utf-8")
-    pdf_display = f'<iframe src="data:application/pdf;base64,{base64_pdf}" width="100%" height="700px" type="application/pdf"></iframe>'
+    """PDFの全ページを画像に変換し、ブラウザでブロックされずに縦並びでプレビュー表示する"""
+    try:
+        doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+        st.markdown(f"### 📄 プレビュー画面 (全 {len(doc)} ページ)")
+        st.markdown(
+            "スクロールしてすべてのページを確認できます。そのまま印刷する場合は、ブラウザの印刷機能（`Ctrl + P` または `Cmd + P`）をご利用ください。"
+        )
+        st.markdown("---")
 
-    st.markdown("### 📄 PDFプレビュー & そのまま印刷")
-    st.markdown(
-        "プレビュー画面内の**印刷ボタン**（または右上のメニュー、`Ctrl+P` 等）から、ダウンロードなしでその場で印刷できます。"
-    )
-    st.markdown(pdf_display, unsafe_allow_html=True)
+        for page_num in range(len(doc)):
+            page = doc.load_page(page_num)
+            pix = page.get_pixmap(dpi=150)
+            img = Image.open(io.BytesIO(pix.tobytes("png")))
+
+            st.image(
+                img, caption=f"第 {page_num + 1} ページ", use_container_width=True
+            )
+            if page_num < len(doc) - 1:
+                st.markdown("---")
+
+    except Exception as e:
+        st.error(f"PDFのプレビュー表示に失敗しました: {e}")
 
 
 # ---------------------------------------------------------
@@ -430,10 +444,10 @@ if st.sidebar.button("プリントを生成する"):
 
 # 生成されたPDFがある場合の表示
 if "pdf_data" in st.session_state:
-    # 1. 1つのPDFビューアとしてインラインプレビュー表示（複数ページ対応・印刷ボタン付き）
+    # 1. 全ページを綺麗に画像化して縦に並べてプレビュー表示
     render_pdf_preview(st.session_state["pdf_data"])
 
-    # 2. ダウンロードボタン（念のため残す）
+    # 2. ダウンロードボタン
     st.download_button(
         label="📥 生成されたPDFをダウンロード",
         data=st.session_state["pdf_data"],
