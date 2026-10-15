@@ -25,7 +25,7 @@ def check_password():
     if st.session_state["password_correct"]:
         return True
 
-    st.title("パスワード保護")
+    st.title("🔒 パスワード保護")
     password_input = st.text_input("パスワードを入力してください", type="password")
 
     if st.button("ログイン", type="primary"):
@@ -33,7 +33,7 @@ def check_password():
             st.session_state["password_correct"] = True
             st.rerun()
         else:
-            st.error("パスワードが違います")
+            st.error("❌ パスワードが違います")
 
     return False
 
@@ -579,7 +579,7 @@ question_database = {
         "次の関数の増減を調べ，グラフを描け：$y=-2x^4+8x-3$",
         "次の関数の増減を調べ，グラフを描け：$y=|x^3+6x^2|$",
         "次の関数の増減を調べ，グラフを描け：$y=|(x+1)^2(x-1)|$",
-        "次の関数の増減を調べ，グラフを描け：$y=|x|x^2$",
+        "次の関数の増減を調べ，グラフを描け：$y=||x|x^2$",
     ],
     "積分": [
         "次の定積分を求めよ：$\\int_{0}^{1}(2x-3)dx$",
@@ -637,6 +637,8 @@ question_database = {
         "$\\lim_{n\\to\\infty}\\frac{1}{n^2}\\sin^2{2n\\theta}$",
         "$\\lim_{n\\to\\infty}\\frac{1}{n^2}(1+\\cos{n\\theta})(1-\\cos{n\\theta})$",
         "$\\lim_{n\\to\\infty}\\frac{\\sin^2{n\\theta}}{n^2+1}$",
+    ],
+    "数III極限計算演習": [
         "$\\lim_{n \\to \\infty} \\frac{\\sqrt{2n^2 + 3n} - \\sqrt{n}}{3n}$",
         "$\\lim_{n \\to \\infty} \\frac{3^n - 2^{n+1}}{3^{n+1} - 2^n}$",
         "$\\lim_{x \\to 0} \\frac{\\sin 3x}{x}$",
@@ -773,7 +775,7 @@ def render_pdf_preview_and_print(pdf_bytes: bytes):
         </style>
     </head>
     <body>
-        <button class="print-btn" onclick="openPrintWindow()">印刷</button>
+        <button class="print-btn" onclick="openPrintWindow()">🖨️ このまま印刷する（ワンクリック）</button>
         <script>
             function openPrintWindow() {{
                 const pdfData = "{base64_pdf}";
@@ -797,7 +799,7 @@ def render_pdf_preview_and_print(pdf_bytes: bytes):
     </html>
     """
 
-    st.markdown("プレビュー & 印刷")
+    st.markdown("### 📄 プレビュー & 印刷")
     components.html(print_html, height=65)
     st.markdown("---")
 
@@ -808,10 +810,11 @@ def render_pdf_preview_and_print(pdf_bytes: bytes):
             pix = page.get_pixmap(dpi=150)
             img = Image.open(io.BytesIO(pix.tobytes("png")))
 
+            # プレビューサイズを調整（幅を500ピクセルに指定して全体が見やすくするように変更）
             st.image(
                 img,
                 caption=f"第 {page_num + 1} / {len(doc)} ページ",
-                use_container_width=True,
+                width=500,
             )
             if page_num < len(doc) - 1:
                 st.markdown("---")
@@ -886,9 +889,9 @@ st.markdown("---")
 # プレビューを表示ボタン
 if st.button("プレビューを表示", type="primary"):
     if not selected_units_config or all(v == 0 for v in selected_units_config.values()):
-        st.warning("少なくとも1つの単元で1問以上の問題数を入力してください。")
+        st.warning("⚠️ 少なくとも1つの単元で1問以上の問題数を入力してください。")
     else:
-        # LaTeXコードの組み立て
+        # LaTeXコードの組み立て (\everymath{\displaystyle} で数式を見やすく大きく表示)
         latex_source = f"""
         \\documentclass[11pt,a4paper]{{ltjsarticle}}
         \\usepackage{{amsmath,amssymb,amsthm}}
@@ -929,7 +932,7 @@ if st.button("プレビューを表示", type="primary"):
             try:
                 pdf_data = compile_latex_to_pdf(latex_source)
                 st.session_state["pdf_data"] = pdf_data
-                st.success("プレビューの生成が完了しました！")
+                st.success("✨ プレビューの生成が完了しました！")
             except Exception:
                 st.error("PDFの生成に失敗しました。")
 
@@ -941,7 +944,7 @@ if "pdf_data" in st.session_state:
 
     # 2. ダウンロードボタン（バックアップ用）
     st.download_button(
-        label="生成されたPDFをダウンロード",
+        label="📥 生成されたPDFをダウンロード",
         data=st.session_state["pdf_data"],
         file_name="math_ガチャ.pdf",
         mime="application/pdf",
