@@ -637,8 +637,6 @@ question_database = {
         "$\\lim_{n\\to\\infty}\\frac{1}{n^2}\\sin^2{2n\\theta}$",
         "$\\lim_{n\\to\\infty}\\frac{1}{n^2}(1+\\cos{n\\theta})(1-\\cos{n\\theta})$",
         "$\\lim_{n\\to\\infty}\\frac{\\sin^2{n\\theta}}{n^2+1}$",
-    ],
-    "数III極限計算演習": [
         "$\\lim_{n \\to \\infty} \\frac{\\sqrt{2n^2 + 3n} - \\sqrt{n}}{3n}$",
         "$\\lim_{n \\to \\infty} \\frac{3^n - 2^{n+1}}{3^{n+1} - 2^n}$",
         "$\\lim_{x \\to 0} \\frac{\\sin 3x}{x}$",
