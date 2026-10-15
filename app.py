@@ -11,7 +11,7 @@ import streamlit.components.v1 as components
 
 # ページの基本設定
 st.set_page_config(
-    page_title="Math Print Generator", page_icon="数学", layout="wide"
+    page_title="数学のガチャ", page_icon="数学", layout="wide"
 )
 
 # ---------------------------------------------------------
@@ -694,7 +694,7 @@ question_database = {
         "$\\lim_{n \\to \\infty} \\sqrt[n]{\\left( 1 + \\frac{1}{n} \\right) \\dots \\left( 1 + \\frac{n}{n} \\right)}$ （札幌医科大学）",
         "$\\lim_{n \\to \\infty} \\frac{1}{n} \\left\\{ \\frac{1^2}{n^2+1} + \\dots + \\frac{(2n)^2}{n^2+1} \\right\\}$ （芝浦工業大学）",
         "$\\lim_{n \\to \\infty} \\left\\{ \\frac{(2n)!}{n! n^n} \\right\\}^{\\frac{1}{n}}$ （横浜国立大学）",
-        "$\\lim_{n \\to \\infty} \\frac{1}{n} \\sum_{k=1}^n \\frac{1}{\\tan \\frac{(n+k)\\pi}{6n}}$ （横浜国立大学）",
+        "$\\lim_{n\\to \\infty} \\frac{1}{n} \\sum_{k=1}^n \\frac{1}{\\tan \\frac{(n+k)\\pi}{6n}}$ （横浜国立大学）",
         "$\\lim_{n \\to \\infty} \\frac{1}{n^4} \\sum_{k=0}^{n-1} k^2 \\sqrt{n^2-k^2}$ （大阪教育大学）",
         "$\\lim_{n \\to \\infty} (2n-1)^2 \\log \\left\\{ 1 + \\frac{3}{4n(n-1)} \\right\\}$ （関西大学）",
         "$\\lim_{n \\to \\infty} \\frac{1}{n} \\left\\{ \\left( \\frac{1}{n} \\right)^3 + \\dots + \\left( \\frac{4n-1}{n} \\right)^3 \\right\\}$ （関西大学）",
@@ -830,18 +830,15 @@ def compile_latex_to_pdf(latex_code: str) -> bytes:
 # ---------------------------------------------------------
 # メイン画面のUI
 # ---------------------------------------------------------
-st.title("📐 数学問題プリントジェネレーター")
-st.write("複数の単元を選択し、それぞれ問題数を直接入力してオリジナル演習プリントを生成できます。")
-
-print_title = st.text_input("プリントタイトル", "数学演習プリント")
+st.title("数学のガチャ")
 
 st.markdown("---")
-st.subheader("📋 単元と出題数の選択")
+st.subheader("単元と出題数の選択")
 st.write("出題したい単元にチェックを入れ、それぞれの問題数を半角数字で直接入力してください。")
 
 selected_units_config = {}
 
-# 各単元ごとにチェックボックスと、チェックされた場合のみ数値入力ボックスを表示
+# 各単元ごとにチェックボックスと、チェックされた場合のみ数値入力ボックスを表示（初期値0）
 for unit, q_list in question_database.items():
     col1, col2 = st.columns([1, 3])
     with col1:
@@ -849,23 +846,23 @@ for unit, q_list in question_database.items():
     with col2:
         if is_checked:
             max_q = len(q_list)
-            default_val = min(5, max_q)
             num_q = st.number_input(
                 f"{unit} の出題数 (最大 {max_q}問)",
-                min_value=1,
+                min_value=0,
                 max_value=max_q,
-                value=default_val,
+                value=0,
                 step=1,
                 key=f"num_{unit}",
             )
-            selected_units_config[unit] = int(num_q)
+            if num_q > 0:
+                selected_units_config[unit] = int(num_q)
 
 st.markdown("---")
 
-# プリント生成ボタン
-if st.button("プリントを生成する", type="primary"):
-    if not selected_units_config:
-        st.warning("⚠️ 少なくとも1つの単元にチェックを入れてください。")
+# プレビューを表示ボタン
+if st.button("プレビューを表示", type="primary"):
+    if not selected_units_config or all(v == 0 for v in selected_units_config.values()):
+        st.warning("⚠️ 少なくとも1つの単元で1問以上の問題数を入力してください。")
     else:
         # LaTeXコードの組み立て
         latex_source = f"""
@@ -873,7 +870,7 @@ if st.button("プリントを生成する", type="primary"):
         \\usepackage{{amsmath,amssymb,amsthm}}
         \\begin{{document}}
         \\begin{{center}}
-            {{\\Large \\textbf{{{print_title}}}}}
+            {{\\Large \\textbf{{数学のガチャ}}}}
         \\end{{center}}
         \\vspace{{1em}}
         \\noindent \\textbf{{氏名: \\underline{{\\hspace{{5cm}}}}}}
@@ -907,7 +904,7 @@ if st.button("プリントを生成する", type="primary"):
             try:
                 pdf_data = compile_latex_to_pdf(latex_source)
                 st.session_state["pdf_data"] = pdf_data
-                st.success("✨ プリントの生成が完了しました！")
+                st.success("✨ プレビューの生成が完了しました！")
             except Exception:
                 st.error("PDFの生成に失敗しました。")
 
@@ -921,6 +918,6 @@ if "pdf_data" in st.session_state:
     st.download_button(
         label="📥 生成されたPDFをダウンロード",
         data=st.session_state["pdf_data"],
-        file_name="math_print.pdf",
+        file_name="math_ガチャ.pdf",
         mime="application/pdf",
     )
