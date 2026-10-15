@@ -694,7 +694,7 @@ question_database = {
         "$\\lim_{n \\to \\infty} \\sqrt[n]{\\left( 1 + \\frac{1}{n} \\right) \\dots \\left( 1 + \\frac{n}{n} \\right)}$ （札幌医科大学）",
         "$\\lim_{n \\to \\infty} \\frac{1}{n} \\left\\{ \\frac{1^2}{n^2+1} + \\dots + \\frac{(2n)^2}{n^2+1} \\right\\}$ （芝浦工業大学）",
         "$\\lim_{n \\to \\infty} \\left\\{ \\frac{(2n)!}{n! n^n} \\right\\}^{\\frac{1}{n}}$ （横浜国立大学）",
-        "$\\lim_{n\\to \\infty} \\frac{1}{n} \\sum_{k=1}^n \\frac{1}{\\tan \\frac{(n+k)\\pi}{6n}}$ （横浜国立大学）",
+        "$\\lim_{n \\to \\infty} \\frac{1}{n} \\sum_{k=1}^n \\frac{1}{\\tan \\frac{(n+k)\\pi}{6n}}$ （横浜国立大学）",
         "$\\lim_{n \\to \\infty} \\frac{1}{n^4} \\sum_{k=0}^{n-1} k^2 \\sqrt{n^2-k^2}$ （大阪教育大学）",
         "$\\lim_{n \\to \\infty} (2n-1)^2 \\log \\left\\{ 1 + \\frac{3}{4n(n-1)} \\right\\}$ （関西大学）",
         "$\\lim_{n \\to \\infty} \\frac{1}{n} \\left\\{ \\left( \\frac{1}{n} \\right)^3 + \\dots + \\left( \\frac{4n-1}{n} \\right)^3 \\right\\}$ （関西大学）",
@@ -831,17 +831,17 @@ def compile_latex_to_pdf(latex_code: str) -> bytes:
 # メイン画面のUI
 # ---------------------------------------------------------
 st.title("📐 数学問題プリントジェネレーター")
-st.write("複数の単元を選択し、それぞれ個別の出題数を指定してオリジナル演習プリントを生成できます。")
+st.write("複数の単元を選択し、それぞれ問題数を直接入力してオリジナル演習プリントを生成できます。")
 
 print_title = st.text_input("プリントタイトル", "数学演習プリント")
 
 st.markdown("---")
 st.subheader("📋 単元と出題数の選択")
-st.write("出題したい単元にチェックを入れ、それぞれの問題数を調整してください。")
+st.write("出題したい単元にチェックを入れ、それぞれの問題数を半角数字で直接入力してください。")
 
 selected_units_config = {}
 
-# 各単元ごとにチェックボックスと、チェックされた場合のみスライダーを表示
+# 各単元ごとにチェックボックスと、チェックされた場合のみ数値入力ボックスを表示
 for unit, q_list in question_database.items():
     col1, col2 = st.columns([1, 3])
     with col1:
@@ -850,14 +850,15 @@ for unit, q_list in question_database.items():
         if is_checked:
             max_q = len(q_list)
             default_val = min(5, max_q)
-            num_q = st.slider(
-                f"{unit} の出題数",
-                1,
-                max_q,
-                default_val,
-                key=f"slider_{unit}",
+            num_q = st.number_input(
+                f"{unit} の出題数 (最大 {max_q}問)",
+                min_value=1,
+                max_value=max_q,
+                value=default_val,
+                step=1,
+                key=f"num_{unit}",
             )
-            selected_units_config[unit] = num_q
+            selected_units_config[unit] = int(num_q)
 
 st.markdown("---")
 
@@ -881,16 +882,13 @@ if st.button("プリントを生成する", type="primary"):
         \\vspace{{1em}}
         """
 
+        # 選択された単元のリストをランダムにシャッフルする
+        units_list = list(selected_units_config.items())
+        random.shuffle(units_list)
+
         global_q_index = 1
-        for unit, count in selected_units_config.items():
-            # 単元ごとの見出しを追加
-            latex_source += f"""
-            \\vspace{{1em}}
-            \\noindent \\textbf{{【単元: {unit}】}}
-            \\vspace{{0.5em}}
-            """
-            
-            # ランダムに指定された数だけ問題を選択
+        for unit, count in units_list:
+            # 指定された数だけランダムに問題を選択
             selected_questions = random.sample(question_database[unit], count)
             for q_text in selected_questions:
                 latex_source += f"""
