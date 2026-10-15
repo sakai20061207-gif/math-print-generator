@@ -892,6 +892,7 @@ if st.button("プレビューを表示", type="primary"):
         latex_source = f"""
         \\documentclass[11pt,a4paper]{{ltjsarticle}}
         \\usepackage{{amsmath,amssymb,amsthm}}
+        \\everymath{\\displaystyle}
         \\begin{{document}}
         \\begin{{center}}
             {{\\Large \\textbf{{数学のガチャ}}}}
