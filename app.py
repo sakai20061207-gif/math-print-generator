@@ -694,7 +694,7 @@ question_database = {
         "$\\lim_{n \\to \\infty} \\sqrt[n]{\\left( 1 + \\frac{1}{n} \\right) \\dots \\left( 1 + \\frac{n}{n} \\right)}$ （札幌医科大学）",
         "$\\lim_{n \\to \\infty} \\frac{1}{n} \\left\\{ \\frac{1^2}{n^2+1} + \\dots + \\frac{(2n)^2}{n^2+1} \\right\\}$ （芝浦工業大学）",
         "$\\lim_{n \\to \\infty} \\left\\{ \\frac{(2n)!}{n! n^n} \\right\\}^{\\frac{1}{n}}$ （横浜国立大学）",
-        "$\\lim_{n \\to \\infty} \\frac{1}{n} \\sum_{k=1}^n \\frac{1}{\\tan \\frac{(n+k)\\pi}{6n}}$ （横浜国立大学）",
+        "$\\lim_{n\\to \\infty} \\frac{1}{n} \\sum_{k=1}^n \\frac{1}{\\tan \\frac{(n+k)\\pi}{6n}}$ （横浜国立大学）",
         "$\\lim_{n \\to \\infty} \\frac{1}{n^4} \\sum_{k=0}^{n-1} k^2 \\sqrt{n^2-k^2}$ （大阪教育大学）",
         "$\\lim_{n \\to \\infty} (2n-1)^2 \\log \\left\\{ 1 + \\frac{3}{4n(n-1)} \\right\\}$ （関西大学）",
         "$\\lim_{n \\to \\infty} \\frac{1}{n} \\left\\{ \\left( \\frac{1}{n} \\right)^3 + \\dots + \\left( \\frac{4n-1}{n} \\right)^3 \\right\\}$ （関西大学）",
@@ -721,7 +721,6 @@ question_database = {
 # PDFプレビュー & 印刷機能
 # ---------------------------------------------------------
 def render_pdf_preview_and_print(pdf_bytes: bytes):
-    """全ページを綺麗に画像化して縦に並べ、ワンクリック印刷ボタンを配置する"""
     base64_pdf = base64.b64encode(pdf_bytes).decode("utf-8")
 
     print_html = f"""
@@ -800,7 +799,6 @@ def render_pdf_preview_and_print(pdf_bytes: bytes):
 # LaTeXコンパイル関数
 # ---------------------------------------------------------
 def compile_latex_to_pdf(latex_code: str) -> bytes:
-    """LaTeXのソースコードからPDFをコンパイルしてバイナリを返す"""
     with tempfile.TemporaryDirectory() as tmpdir:
         tex_path = os.path.join(tmpdir, "output.tex")
         with open(tex_path, "w", encoding="utf-8") as f:
@@ -833,64 +831,91 @@ def compile_latex_to_pdf(latex_code: str) -> bytes:
 # メイン画面のUI
 # ---------------------------------------------------------
 st.title("📐 数学問題プリントジェネレーター")
-st.write("ランダムに問題が選ばれるオリジナル演習プリントを生成できます。")
+st.write("複数の単元を選択し、それぞれ個別の出題数を指定してオリジナル演習プリントを生成できます。")
 
-# サイドバーの設定
-st.sidebar.header("プリント設定")
-print_title = st.sidebar.text_input("プリントタイトル", "数学演習プリント")
+print_title = st.text_input("プリントタイトル", "数学演習プリント")
 
-# 辞書のキーから単元の選択肢を自動生成
-available_units = list(question_database.keys())
-problem_type = st.sidebar.selectbox("単元・テーマの選択", available_units)
+st.markdown("---")
+st.subheader("📋 単元と出題数の選択")
+st.write("出題したい単元にチェックを入れ、それぞれの問題数を調整してください。")
 
-# 選択された単元に含まれる問題数に合わせてスライダーの最大値を設定
-max_q_count = len(question_database[problem_type])
-num_questions = st.sidebar.slider("出力する問題数", 1, max_q_count, min(10, max_q_count))
+selected_units_config = {}
+
+# 各単元ごとにチェックボックスと、チェックされた場合のみスライダーを表示
+for unit, q_list in question_database.items():
+    col1, col2 = st.columns([1, 3])
+    with col1:
+        is_checked = st.checkbox(unit, key=f"chk_{unit}")
+    with col2:
+        if is_checked:
+            max_q = len(q_list)
+            default_val = min(5, max_q)
+            num_q = st.slider(
+                f"{unit} の出題数",
+                1,
+                max_q,
+                default_val,
+                key=f"slider_{unit}",
+            )
+            selected_units_config[unit] = num_q
+
+st.markdown("---")
 
 # プリント生成ボタン
-if st.sidebar.button("プリントを生成する"):
-    # LaTeXコードの組み立て
-    latex_source = f"""
-    \\documentclass[11pt,a4paper]{{ltjsarticle}}
-    \\usepackage{{amsmath,amssymb,amsthm}}
-    \\begin{{document}}
-    \\begin{{center}}
-        {{\\Large \\textbf{{{print_title}}}}}
-    \\end{{center}}
-    \\vspace{{1em}}
-    \\noindent \\textbf{{単元: {problem_type}}} \\hfill \\textbf{{氏名: \\underline{{\\hspace{{5cm}}}}}}
-    \\vspace{{1.5em}}
-    \\hrule
-    \\vspace{{1em}}
-    """
-
-    # 指定された数だけランダムに問題を取り出す
-    selected_questions = random.sample(
-        question_database[problem_type], num_questions
-    )
-
-    for i, q_text in enumerate(selected_questions, start=1):
-        latex_source += f"""
-        \\begin{{samepage}}
-        \\noindent \\textbf{{({i})}} {q_text}
+if st.button("プリントを生成する", type="primary"):
+    if not selected_units_config:
+        st.warning("⚠️ 少なくとも1つの単元にチェックを入れてください。")
+    else:
+        # LaTeXコードの組み立て
+        latex_source = f"""
+        \\documentclass[11pt,a4paper]{{ltjsarticle}}
+        \\usepackage{{amsmath,amssymb,amsthm}}
+        \\begin{{document}}
+        \\begin{{center}}
+            {{\\Large \\textbf{{{print_title}}}}}
+        \\end{{center}}
+        \\vspace{{1em}}
+        \\noindent \\textbf{{氏名: \\underline{{\\hspace{{5cm}}}}}}
         \\vspace{{1.5em}}
-        \\end{{samepage}}
+        \\hrule
+        \\vspace{{1em}}
         """
 
-    latex_source += """
-    \\end{document}
-    """
+        global_q_index = 1
+        for unit, count in selected_units_config.items():
+            # 単元ごとの見出しを追加
+            latex_source += f"""
+            \\vspace{{1em}}
+            \\noindent \\textbf{{【単元: {unit}】}}
+            \\vspace{{0.5em}}
+            """
+            
+            # ランダムに指定された数だけ問題を選択
+            selected_questions = random.sample(question_database[unit], count)
+            for q_text in selected_questions:
+                latex_source += f"""
+                \\begin{{samepage}}
+                \\noindent \\textbf{{({global_q_index})}} {q_text}
+                \\vspace{{1.5em}}
+                \\end{{samepage}}
+                """
+                global_q_index += 1
 
-    with st.spinner("PDFをコンパイル中..."):
-        try:
-            pdf_data = compile_latex_to_pdf(latex_source)
-            st.session_state["pdf_data"] = pdf_data
-            st.success("✨ プリントの生成が完了しました！")
-        except Exception:
-            st.error("PDFの生成に失敗しました。")
+        latex_source += """
+        \\end{document}
+        """
+
+        with st.spinner("PDFをコンパイル中..."):
+            try:
+                pdf_data = compile_latex_to_pdf(latex_source)
+                st.session_state["pdf_data"] = pdf_data
+                st.success("✨ プリントの生成が完了しました！")
+            except Exception:
+                st.error("PDFの生成に失敗しました。")
 
 # 生成されたPDFがある場合の表示
 if "pdf_data" in st.session_state:
+    st.markdown("---")
     # 1. プレビュー表示 ＆ ワンクリック印刷ボタン
     render_pdf_preview_and_print(st.session_state["pdf_data"])
 
