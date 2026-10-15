@@ -87,7 +87,7 @@ question_database = {
         "$\\frac{1-2i}{3-i}-\\frac{5+i}{5i}$",
         "$\\left(\\frac{7+3i}{2+5i}\\right)^{10}$",
         "$i^{100}$",
-        "$(1+\\sqrt{3})^8$",
+        "$(1+\\sqrt{3}i)^8$",
         "$i+i^2+i^3+i^4$",
         "$i+i^2+i^3+i^4+\\cdots+i^{30}$",
         "次の多項式を[\\quad]内の式で割ったときの余りを求めよ：$x^3+x^2+2x-1\\quad[x-2]$",
@@ -440,11 +440,10 @@ def compile_latex_to_pdf(latex_code: str) -> bytes:
 # メイン画面のUI
 # ---------------------------------------------------------
 st.title("数学のガチャ")
-st.write("ランダムに問題が選ばれるオリジナル演習プリントを生成できます。")
 
 # サイドバーの設定
 st.sidebar.header("プリント設定")
-print_title = st.sidebar.text_input("プリントタイトル", "数学演習プリント")
+print_title = st.sidebar.text_input("プリントタイトル", "数学のガチャ")
 
 # 辞書のキーから単元の選択肢を自動生成
 available_units = list(question_database.keys())
