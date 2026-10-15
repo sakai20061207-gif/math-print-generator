@@ -15,6 +15,32 @@ st.set_page_config(
 )
 
 # ---------------------------------------------------------
+# パスワード認証機能
+# ---------------------------------------------------------
+def check_password():
+    """パスワードが正しく入力されているか確認する関数"""
+    if "password_correct" not in st.session_state:
+        st.session_state["password_correct"] = False
+
+    if st.session_state["password_correct"]:
+        return True
+
+    st.title("🔒 パスワード保護")
+    password_input = st.text_input("パスワードを入力してください", type="password")
+
+    if st.button("ログイン", type="primary"):
+        if password_input == "Inki1985":
+            st.session_state["password_correct"] = True
+            st.rerun()
+        else:
+            st.error("❌ パスワードが違います")
+
+    return False
+
+if not check_password():
+    st.stop()
+
+# ---------------------------------------------------------
 # 単元ごとの問題データの定義（全問題リスト）
 # ---------------------------------------------------------
 question_database = {
@@ -749,7 +775,7 @@ def render_pdf_preview_and_print(pdf_bytes: bytes):
         </style>
     </head>
     <body>
-        <button class="print-btn" onclick="openPrintWindow()">印刷</button>
+        <button class="print-btn" onclick="openPrintWindow()">🖨️ このまま印刷する（ワンクリック）</button>
         <script>
             function openPrintWindow() {{
                 const pdfData = "{base64_pdf}";
@@ -773,7 +799,7 @@ def render_pdf_preview_and_print(pdf_bytes: bytes):
     </html>
     """
 
-    st.markdown("印刷")
+    st.markdown("### 📄 プレビュー & 印刷")
     components.html(print_html, height=65)
     st.markdown("---")
 
@@ -862,7 +888,7 @@ st.markdown("---")
 # プレビューを表示ボタン
 if st.button("プレビューを表示", type="primary"):
     if not selected_units_config or all(v == 0 for v in selected_units_config.values()):
-        st.warning("少なくとも1つの単元で1問以上の問題数を入力してください。")
+        st.warning("⚠️ 少なくとも1つの単元で1問以上の問題数を入力してください。")
     else:
         # LaTeXコードの組み立て
         latex_source = f"""
@@ -904,7 +930,7 @@ if st.button("プレビューを表示", type="primary"):
             try:
                 pdf_data = compile_latex_to_pdf(latex_source)
                 st.session_state["pdf_data"] = pdf_data
-                st.success("プレビューの生成が完了しました！")
+                st.success("✨ プレビューの生成が完了しました！")
             except Exception:
                 st.error("PDFの生成に失敗しました。")
 
@@ -916,7 +942,7 @@ if "pdf_data" in st.session_state:
 
     # 2. ダウンロードボタン（バックアップ用）
     st.download_button(
-        label="生成されたPDFをダウンロード",
+        label="📥 生成されたPDFをダウンロード",
         data=st.session_state["pdf_data"],
         file_name="math_ガチャ.pdf",
         mime="application/pdf",
