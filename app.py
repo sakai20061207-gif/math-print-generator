@@ -905,69 +905,68 @@ def compile_latex_to_pdf(latex_code: str) -> bytes:
 
 
 # ---------------------------------------------------------
-# メイン画面のUI（階層型チェックボックス）
+# メイン画面のUI（段階的チェックボックス＆問題数入力）
 # ---------------------------------------------------------
 st.title("数学のガチャ")
 
 st.markdown("---")
-st.subheader("単元と出題数の選択")
-st.write("出題したい分野のチェックボックスを展開し、それぞれの問題数を直接入力してください。")
+st.subheader("分野の選択と出題数設定")
+st.write("1. まず出題したい**大分野**にチェックを入れてください。")
 
 selected_units_config = {}
 
-for major_cat, sub_dict in question_database.items():
-    st.markdown(f"### 📁 {major_cat}")
-    
-    # 辞書ではなく直下のリストである場合（例: 複素数、極限）
-    if isinstance(sub_dict, list):
-        is_checked = st.checkbox(f"{major_cat} 全体", key=f"chk_{major_cat}")
-        if is_checked:
-            max_q = len(sub_dict)
-            num_q = st.number_input(
-                f"{major_cat} の出題数 (最大 {max_q}問)",
-                min_value=0, max_value=max_q, value=0, step=1,
-                key=f"num_{major_cat}"
-            )
-            if num_q > 0:
-                selected_units_config[major_cat] = (sub_dict, int(num_q))
-                
-    # 辞書である場合（中・小分野に分かれている場合）
-    elif isinstance(sub_dict, dict):
-        for mid_cat, q_or_sub in sub_dict.items():
-            # 中分野の直下に問題リストがある場合（例: 二次関数の「最大値・最小値」「決定」）
-            if isinstance(q_or_sub, list):
-                is_checked = st.checkbox(f" └ {mid_cat}", key=f"chk_{major_cat}_{mid_cat}")
-                if is_checked:
-                    max_q = len(q_or_sub)
+# ステップ1: 大分野の選択チェックボックス
+major_checked_states = {}
+for major_cat in question_database.keys():
+    major_checked_states[major_cat] = st.checkbox(f"📁 {major_cat}", key=f"maj_{major_cat}")
+
+st.markdown("---")
+st.write("2. チェックを入れた分野の中にある**小分野**が表示されます。さらにチェックを入れてください。")
+
+has_any_major = False
+
+for major_cat, is_major_checked in major_checked_states.items():
+    if is_major_checked:
+        has_any_major = True
+        st.markdown(f"**▼ {major_cat} の詳細選択**")
+        sub_content = question_database[major_cat]
+        
+        # 細分化されていない単元（リスト構造：複素数や極限など）の場合
+        if isinstance(sub_content, list):
+            sub_chk = st.checkbox(f" └ {major_cat} （全 {len(sub_content)} 問）", key=f"sub_list_{major_cat}")
+            if sub_chk:
+                max_q = len(sub_content)
+                num_q = st.number_input(
+                    f"  出題数 (最大 {max_q}問)",
+                    min_value=0, max_value=max_q, value=0, step=1,
+                    key=f"num_list_{major_cat}"
+                )
+                if num_q > 0:
+                    selected_units_config[major_cat] = (sub_content, int(num_q))
+                    
+        # 細分化されている単元（辞書構造：多項式の計算、二次関数など）の場合
+        elif isinstance(sub_content, dict):
+            for sub_cat, q_list in sub_content.items():
+                sub_chk = st.checkbox(f" └ {sub_cat} （全 {len(q_list)} 問）", key=f"sub_dict_{major_cat}_{sub_cat}")
+                if sub_chk:
+                    max_q = len(q_list)
                     num_q = st.number_input(
-                        f"  {mid_cat} の出題数 (最大 {max_q}問)",
+                        f"  出題数 (最大 {max_q}問)",
                         min_value=0, max_value=max_q, value=0, step=1,
-                        key=f"num_{major_cat}_{mid_cat}"
+                        key=f"num_dict_{major_cat}_{sub_cat}"
                     )
                     if num_q > 0:
-                        selected_units_config[f"{major_cat} > {mid_cat}"] = (q_or_sub, int(num_q))
-            
-            # さらに小分野がある場合（例: 三角関数、指数・対数、漸化式など）
-            elif isinstance(q_or_sub, dict):
-                st.markdown(f"&nbsp;&nbsp;&nbsp;&nbsp;**└ {mid_cat}**")
-                for sub_cat, q_list in q_or_sub.items():
-                    is_checked = st.checkbox(f"  └ {sub_cat}", key=f"chk_{major_cat}_{mid_cat}_{sub_cat}")
-                    if is_checked:
-                        max_q = len(q_list)
-                        num_q = st.number_input(
-                            f"   {sub_cat} の出題数 (最大 {max_q}問)",
-                            min_value=0, max_value=max_q, value=0, step=1,
-                            key=f"num_{major_cat}_{mid_cat}_{sub_cat}"
-                        )
-                        if num_q > 0:
-                            selected_units_config[f"{major_cat} > {mid_cat} > {sub_cat}"] = (q_list, int(num_q))
+                        selected_units_config[f"{major_cat} > {sub_cat}"] = (q_list, int(num_q))
+
+if not has_any_major:
+    st.info("👆 上の大分野のいずれかにチェックを入れると、対応する小分野のチェックボックスがここに展開されます。")
 
 st.markdown("---")
 
 # プレビューを表示ボタン
 if st.button("プレビューを表示", type="primary"):
     if not selected_units_config:
-        st.warning("⚠️ 少なくとも1つの項目で1問以上の問題数を入力してください。")
+        st.warning("⚠️ 小分野にチェックを入れ、1問以上の問題数を入力してください。")
     else:
         # LaTeXコードの組み立て (\everymath{\displaystyle} で数式を大きく見やすく表示)
         latex_source = f"""
