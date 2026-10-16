@@ -25,7 +25,7 @@ def check_password():
     if st.session_state["password_correct"]:
         return True
 
-    st.title("🔒 パスワード保護")
+    st.title("パスワード保護")
     password_input = st.text_input("パスワードを入力してください", type="password")
 
     if st.button("ログイン", type="primary"):
@@ -33,7 +33,7 @@ def check_password():
             st.session_state["password_correct"] = True
             st.rerun()
         else:
-            st.error("❌ パスワードが違います")
+            st.error("パスワードが違います")
 
     return False
 
@@ -826,7 +826,7 @@ def render_pdf_preview_and_print(pdf_bytes: bytes):
         </style>
     </head>
     <body>
-        <button class="print-btn" onclick="openPrintWindow()">🖨️ このまま印刷する（ワンクリック）</button>
+        <button class="print-btn" onclick="openPrintWindow()">このまま印刷する</button>
         <script>
             function openPrintWindow() {{
                 const pdfData = "{base64_pdf}";
@@ -850,7 +850,7 @@ def render_pdf_preview_and_print(pdf_bytes: bytes):
     </html>
     """
 
-    st.markdown("### 📄 プレビュー & 印刷")
+    st.markdown("### プレビュー & 印刷")
     components.html(print_html, height=65)
     st.markdown("---")
 
@@ -905,32 +905,21 @@ def compile_latex_to_pdf(latex_code: str) -> bytes:
 
 
 # ---------------------------------------------------------
-# メイン画面のUI（段階的チェックボックス＆問題数入力）
+# メイン画面のUI（各分野の直下に小分野・問題数を順次展開）
 # ---------------------------------------------------------
 st.title("数学のガチャ")
 
 st.markdown("---")
 st.subheader("分野の選択と出題数設定")
-st.write("1. まず出題したい**大分野**にチェックを入れてください。")
+st.write("出題したい大分野にチェックを入れると、その下に小分野と出題数の設定が表示されます。")
 
 selected_units_config = {}
 
-# ステップ1: 大分野の選択チェックボックス
-major_checked_states = {}
-for major_cat in question_database.keys():
-    major_checked_states[major_cat] = st.checkbox(f"📁 {major_cat}", key=f"maj_{major_cat}")
-
-st.markdown("---")
-st.write("2. チェックを入れた分野の中にある**小分野**が表示されます。さらにチェックを入れてください。")
-
-has_any_major = False
-
-for major_cat, is_major_checked in major_checked_states.items():
+for major_cat, sub_content in question_database.items():
+    # 大分野のチェックボックス
+    is_major_checked = st.checkbox(f"{major_cat}", key=f"maj_{major_cat}")
+    
     if is_major_checked:
-        has_any_major = True
-        st.markdown(f"**▼ {major_cat} の詳細選択**")
-        sub_content = question_database[major_cat]
-        
         # 細分化されていない単元（リスト構造：複素数や極限など）の場合
         if isinstance(sub_content, list):
             sub_chk = st.checkbox(f" └ {major_cat} （全 {len(sub_content)} 問）", key=f"sub_list_{major_cat}")
@@ -958,15 +947,12 @@ for major_cat, is_major_checked in major_checked_states.items():
                     if num_q > 0:
                         selected_units_config[f"{major_cat} > {sub_cat}"] = (q_list, int(num_q))
 
-if not has_any_major:
-    st.info("👆 上の大分野のいずれかにチェックを入れると、対応する小分野のチェックボックスがここに展開されます。")
-
 st.markdown("---")
 
 # プレビューを表示ボタン
 if st.button("プレビューを表示", type="primary"):
     if not selected_units_config:
-        st.warning("⚠️ 小分野にチェックを入れ、1問以上の問題数を入力してください。")
+        st.warning("小分野にチェックを入れ、1問以上の問題数を入力してください。")
     else:
         # LaTeXコードの組み立て (\everymath{\displaystyle} で数式を大きく見やすく表示)
         latex_source = f"""
@@ -1008,7 +994,7 @@ if st.button("プレビューを表示", type="primary"):
             try:
                 pdf_data = compile_latex_to_pdf(latex_source)
                 st.session_state["pdf_data"] = pdf_data
-                st.success("✨ プレビューの生成が完了しました！")
+                st.success("プレビューの生成が完了しました！")
             except Exception:
                 st.error("PDFの生成に失敗しました。")
 
@@ -1020,7 +1006,7 @@ if "pdf_data" in st.session_state:
 
     # 2. ダウンロードボタン（バックアップ用）
     st.download_button(
-        label="📥 生成されたPDFをダウンロード",
+        label="生成されたPDFをダウンロード",
         data=st.session_state["pdf_data"],
         file_name="math_ガチャ.pdf",
         mime="application/pdf",
