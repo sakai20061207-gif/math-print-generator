@@ -1925,19 +1925,32 @@ for top_key, top_val in question_database.items():
                         is_chap = st.checkbox(f"    └ {chap_name}", key=f"chk_{subject}_{chap_name}")
                         if is_chap:
                             for sec_name, subsections in sections.items():
-                                is_sec = st.checkbox(f"      └ {sec_name}", key=f"chk_{subject}_{chap_name}_{sec_name}")
-                                if is_sec:
-                                    for sub_name, q_list in subsections.items():
-                                        sub_chk = st.checkbox(f"        └ {sub_name} （全 {len(q_list)} 問）", key=f"chk_{subject}_{chap_name}_{sec_name}_{sub_name}")
-                                        if sub_chk:
-                                            max_q = len(q_list)
-                                            num_q = st.number_input(
-                                                f"          出題数 (最大 {max_q}問)",
-                                                min_value=0, max_value=max_q, value=0, step=1,
-                                                key=f"num_{subject}_{chap_name}_{sec_name}_{sub_name}"
-                                            )
-                                            if num_q > 0:
-                                                selected_units_config[f"{subject} > {chap_name} > {sec_name} > {sub_name}"] = (q_list, int(num_q))
+                                if isinstance(subsections, dict):
+                                    is_sec = st.checkbox(f"      └ {sec_name}", key=f"chk_{subject}_{chap_name}_{sec_name}")
+                                    if is_sec:
+                                        for sub_name, q_list in subsections.items():
+                                            sub_chk = st.checkbox(f"        └ {sub_name} （全 {len(q_list)} 問）", key=f"chk_{subject}_{chap_name}_{sec_name}_{sub_name}")
+                                            if sub_chk:
+                                                max_q = len(q_list)
+                                                num_q = st.number_input(
+                                                    f"          出題数 (最大 {max_q}問)",
+                                                    min_value=0, max_value=max_q, value=0, step=1,
+                                                    key=f"num_{subject}_{chap_name}_{sec_name}_{sub_name}"
+                                                )
+                                                if num_q > 0:
+                                                    selected_units_config[f"{subject} > {chap_name} > {sec_name} > {sub_name}"] = (q_list, int(num_q))
+                                elif isinstance(subsections, list):
+                                    q_list = subsections
+                                    sub_chk = st.checkbox(f"      └ {sec_name} （全 {len(q_list)} 問）", key=f"chk_{subject}_{chap_name}_{sec_name}")
+                                    if sub_chk:
+                                        max_q = len(q_list)
+                                        num_q = st.number_input(
+                                            f"        出題数 (最大 {max_q}問)",
+                                            min_value=0, max_value=max_q, value=0, step=1,
+                                            key=f"num_{subject}_{chap_name}_{sec_name}"
+                                        )
+                                        if num_q > 0:
+                                            selected_units_config[f"{subject} > {chap_name} > {sec_name}"] = (q_list, int(num_q))
     else:
         # その他の単元（複素数、二次関数、三角関数、指数対数など）
         is_major_checked = st.checkbox(f"{top_key}", key=f"maj_{top_key}")
