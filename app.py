@@ -1339,7 +1339,7 @@ question_database = {
                     "方程式 $x^2 = a e^x$ が異なる3個の実数解をもつような定数 $a$ の範囲を求めよ。"
                 ],
                 "第4章 演習問題A": [
-                    "2つの曲線 $y = x^2+ax+b, y = \\frac{8}{x}$ が点 $(2,4)$ で直交するとき，$a, b$ を求めよ。",
+                    "2つの曲線 $y = x^2+ax+b, y = \\frac{8}{x}$ が点 $(2,4)$ で直交するとき、$a, b$ を求めよ。",
                     "関数 $f(x) = \\frac{e^x}{\\sin x} \\quad (0 < x < 2\\pi)$ の極値を求めよ。",
                     "放物線上の接線と座標軸が作る三角形の面積の最小値を求めよ。",
                     "曲線 $y = \\frac{x}{x^2+a}$ の変曲点の個数を調べよ。"
@@ -1984,11 +1984,12 @@ st.markdown("---")
 # プレビューを表示ボタン
 if st.button("プレビューを表示", type="primary"):
     if not selected_units_config:
-        st.warning("項目にチェックを入れ、1問以上の問題数を入力してください。")
+        st.warning("項目にチェック를入れ、1問以上の問題数を入力してください。")
     else:
+        # 修正点: \package -> \usepackage
         latex_source = f"""
         \\documentclass[11pt,a4paper]{{ltjsarticle}}
-        \\package{{amsmath,amssymb,amsthm}}
+        \\usepackage{{amsmath,amssymb,amsthm}}
         \\everymath{{\\displaystyle}}
         \\begin{{document}}
         \\begin{{center}}
