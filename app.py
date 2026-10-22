@@ -3489,42 +3489,71 @@ def clean_unit_title(name):
 
 
 def render_unit_checkboxes(all_units):
-    """最小単元を一覧表で表示し、連続する親単元名は一度だけ表示する。"""
+    """最小単元を表形式で表示し、親単元名は連続する行で繰り返さない。"""
     previous_path = []
+
+    # 教科書・教材／科目／分野／小単元（親）／最小単元／問題数／選択
+    widths = [1.2, 1.3, 1.5, 1.7, 3.2, 0.9, 0.5]
+
     for unit_path, questions in all_units:
         cleaned_path = [clean_unit_title(part) for part in unit_path]
-        # 表示列は「教科書・教材／科目／分野／小単元」。
-        padded_path = (cleaned_path + [""] * 4)[:4]
-        display_path = []
-        for i, title in enumerate(padded_path):
-            # 同じ親単元が連続している間は空欄にして、見出しを繰り返さない。
-            same_parent = (
-                i < len(previous_path)
-                and i < len(cleaned_path)
-                and i < len(previous_path)
-                and padded_path[i] == previous_path[i]
-                and all(padded_path[j] == previous_path[j] for j in range(i))
-            )
-            display_path.append("" if title and same_parent else title)
 
-        subject_col, middle_col, section_col, unit_col, count_col, checkbox_col = st.columns(
-            [1.2, 1.5, 1.8, 3.8, 1.0, 0.55], vertical_alignment="center"
-        )
-        for col, title in zip(
-            [subject_col, middle_col, section_col, unit_col], display_path
-        ):
-            col.markdown(title or "&nbsp;", unsafe_allow_html=True)
-        count_col.markdown(f"全{len(questions)}問")
+        # 先頭3階層は固定列に表示する。
+        first_levels = (cleaned_path[:3] + [""] * 3)[:3]
+
+        # 4階層目以降は、最後を最小単元名、それ以前を親単元名として表示。
+        if len(cleaned_path) >= 5:
+            parent_unit = " / ".join(cleaned_path[3:-1])
+            leaf_unit = cleaned_path[-1]
+        elif len(cleaned_path) == 4:
+            parent_unit = ""
+            leaf_unit = cleaned_path[-1]
+        else:
+            parent_unit = ""
+            leaf_unit = cleaned_path[-1] if cleaned_path else ""
+
+        current_display = first_levels + [parent_unit, leaf_unit]
+        previous_display = (
+            previous_path[:3] + [""] * max(0, 3 - len(previous_path))
+        )[:3]
+        previous_parent = " / ".join(previous_path[3:-1]) if len(previous_path) >= 5 else ""
+
+        display_values = []
+        for i, title in enumerate(current_display):
+            if i < 3:
+                same_parent = (
+                    bool(title)
+                    and i < len(previous_display)
+                    and title == previous_display[i]
+                    and all(
+                        current_display[j] == previous_display[j]
+                        for j in range(i)
+                    )
+                )
+                display_values.append("" if same_parent else title)
+            elif i == 3:
+                display_values.append("" if title and title == previous_parent else title)
+            else:
+                display_values.append(title)
+
+        cols = st.columns(widths, vertical_alignment="center")
+        for col, title in zip(cols[:5], display_values):
+            col.markdown(title if title else "&nbsp;", unsafe_allow_html=True)
+
+        cols[5].markdown(f"全{len(questions)}問")
         checkbox_key = "unit_" + "__".join(unit_path)
-        checkbox_col.checkbox(
-            "選択", key=checkbox_key, help=" > ".join(unit_path),
+        cols[6].checkbox(
+            "選択",
+            key=checkbox_key,
+            help=" > ".join(unit_path),
             label_visibility="collapsed",
         )
+
         st.markdown(
             "<hr style='margin:0; border:0; border-top:1px solid rgba(128,128,128,0.55);'>",
             unsafe_allow_html=True,
         )
-        previous_path = padded_path
+        previous_path = cleaned_path
 
 
 def get_selected_units(all_units):
@@ -3548,12 +3577,35 @@ if "selection_step" not in st.session_state:
     st.session_state["selection_step"] = "units"
 
 if st.session_state["selection_step"] == "units":
+    st.markdown(
+        """<style>
+        div[data-testid="stHorizontalBlock"] {
+            border-left: 1px solid #9a9a9a;
+            border-right: 1px solid #9a9a9a;
+        }
+        div[data-testid="stHorizontalBlock"] > div[data-testid="column"] {
+            border-right: 1px solid #b0b0b0;
+            padding-left: 0.35rem;
+            padding-right: 0.35rem;
+        }
+        div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:last-child {
+            border-right: none;
+        }
+        </style>""",
+        unsafe_allow_html=True,
+    )
     st.subheader("① 出題する単元を選択")
     st.write("小単元をすべて表示しています。出題したい小単元にチェックを入れ、最後に「選択した単元を決定」を押してください。ここでは問題数を指定しません。")
 
     # 見出し行を設け、すべての最小単元を同じ列構成の一覧表にする。
-    header_cols = st.columns([1.2, 1.5, 1.8, 3.8, 1.0, 0.55], vertical_alignment="center")
-    for col, heading in zip(header_cols, ["教科書・教材", "科目", "分野", "小単元", "問題数", "選択"]):
+    header_cols = st.columns(
+        [1.2, 1.3, 1.5, 1.7, 3.2, 0.9, 0.5],
+        vertical_alignment="center",
+    )
+    for col, heading in zip(
+        header_cols,
+        ["教科書・教材", "科目", "分野", "小単元", "最小単元", "問題数", "選択"],
+    ):
         col.markdown(f"**{heading}**")
     st.markdown(
         "<hr style='margin:0; border:0; border-top:2px solid rgba(128,128,128,0.8);'>",
