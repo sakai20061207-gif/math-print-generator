@@ -119,6 +119,30 @@ def check_password():
 if not check_password():
     st.stop()
 
+# アプリ全体の主要ボタンをログインボタンと同じ青系に統一
+st.markdown(
+    """<style>
+    .stApp button[kind="primary"],
+    .stApp button[kind="primaryFormSubmit"] {
+        background-color: #2563eb !important;
+        border: 1px solid #2563eb !important;
+        color: #ffffff !important;
+        border-radius: 8px !important;
+    }
+    .stApp button[kind="primary"]:hover,
+    .stApp button[kind="primaryFormSubmit"]:hover {
+        background-color: #1d4ed8 !important;
+        border-color: #1d4ed8 !important;
+        color: #ffffff !important;
+    }
+    .stApp button[kind="primary"]:focus,
+    .stApp button[kind="primaryFormSubmit"]:focus {
+        box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.25) !important;
+    }
+    </style>""",
+    unsafe_allow_html=True,
+)
+
 # ---------------------------------------------------------
 # 階層化された教科書・問題データ（全分野統合版）
 # ---------------------------------------------------------
