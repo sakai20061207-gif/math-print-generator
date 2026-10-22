@@ -13,7 +13,7 @@ import streamlit.components.v1 as components
 # ページの基本設定
 st.set_page_config(
     page_title="数学のガチャ", page_icon="数学", layout="wide"
-)
+    )
 
 # ---------------------------------------------------------
 # パスワード認証機能
