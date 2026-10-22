@@ -3489,28 +3489,34 @@ def clean_unit_title(name):
 
 
 def render_unit_checkboxes(data, path=(), depth=0):
-    """章・節番号を省き、最小単元を表形式に近いコンパクトな行で表示する。"""
+    """最小単元を階層別の列に分け、罫線で区切った一覧表として表示する。"""
     if not isinstance(data, dict):
         return
 
     for name, value in data.items():
-        display_name = clean_unit_title(name)
         if isinstance(value, dict):
-            # 大分野・中分野は見出しとして残し、章・節の番号だけを除く。
-            st.markdown(f"**{'　' * depth}{display_name}**")
             render_unit_checkboxes(value, path + (name,), depth + 1)
         elif isinstance(value, list):
             unit_path = path + (name,)
+            # 表示用の階層名から「第1章」「第1節」などの番号を取り除く。
+            cleaned_path = [clean_unit_title(part) for part in unit_path]
+            # 親階層を別々の列に配置し、最小単元を1行ずつ並べる。
+            padded_path = (cleaned_path + [""] * 4)[:4]
+            subject_col, middle_col, section_col, unit_col, count_col, checkbox_col = st.columns(
+                [1.2, 1.5, 1.8, 3.8, 1.0, 0.55], vertical_alignment="center"
+            )
+            subject_col.markdown(padded_path[0] or "&nbsp;", unsafe_allow_html=True)
+            middle_col.markdown(padded_path[1] or "&nbsp;", unsafe_allow_html=True)
+            section_col.markdown(padded_path[2] or "&nbsp;", unsafe_allow_html=True)
+            unit_col.markdown(padded_path[3] or "&nbsp;", unsafe_allow_html=True)
+            count_col.markdown(f"全{len(value)}問")
             checkbox_key = "unit_" + "__".join(unit_path)
-            label_col, count_col, checkbox_col = st.columns([10, 2, 1], vertical_alignment="center")
-            label_col.markdown(f"{'　' * depth}{display_name}")
-            count_col.markdown(f"全 {len(value)} 問")
             checkbox_col.checkbox(
                 "選択", key=checkbox_key, help=" > ".join(unit_path),
                 label_visibility="collapsed",
             )
             st.markdown(
-                "<hr style='margin:0; border:0; border-top:1px solid rgba(128,128,128,0.35);'>",
+                "<hr style='margin:0; border:0; border-top:1px solid rgba(128,128,128,0.55);'>",
                 unsafe_allow_html=True,
             )
 
@@ -3539,18 +3545,26 @@ if st.session_state["selection_step"] == "units":
     st.subheader("① 出題する単元を選択")
     st.write("小単元をすべて表示しています。出題したい小単元にチェックを入れ、最後に「選択した単元を決定」を押してください。ここでは問題数を指定しません。")
 
-    # 表のように行を線で区切り、個々の小単元を枠で囲まないことで縦の長さを抑える。
+    # 見出し行を設け、すべての最小単元を同じ列構成の一覧表にする。
+    header_cols = st.columns([1.2, 1.5, 1.8, 3.8, 1.0, 0.55], vertical_alignment="center")
+    for col, heading in zip(header_cols, ["教科書・教材", "科目", "分野", "小単元", "問題数", "選択"]):
+        col.markdown(f"**{heading}**")
+    st.markdown(
+        "<hr style='margin:0; border:0; border-top:2px solid rgba(128,128,128,0.8);'>",
+        unsafe_allow_html=True,
+    )
     for top_key, top_val in question_database.items():
-        st.markdown(f"### {clean_unit_title(top_key)}")
         if isinstance(top_val, dict):
             render_unit_checkboxes(top_val, (top_key,), depth=0)
         elif isinstance(top_val, list):
             checkbox_key = "unit_" + "__".join((top_key,))
-            label_col, count_col, checkbox_col = st.columns([10, 2, 1], vertical_alignment="center")
+            label_col, middle_col, section_col, unit_col, count_col, checkbox_col = st.columns(
+                [1.2, 1.5, 1.8, 3.8, 1.0, 0.55], vertical_alignment="center"
+            )
             label_col.markdown(clean_unit_title(top_key))
-            count_col.markdown(f"全 {len(top_val)} 問")
+            count_col.markdown(f"全{len(top_val)}問")
             checkbox_col.checkbox("選択", key=checkbox_key, help=top_key, label_visibility="collapsed")
-            st.markdown("<hr style='margin:0; border:0; border-top:1px solid rgba(128,128,128,0.35);'>", unsafe_allow_html=True)
+            st.markdown("<hr style='margin:0; border:0; border-top:1px solid rgba(128,128,128,0.55);'>", unsafe_allow_html=True)
 
     st.markdown("---")
     if st.button("選択した単元を決定", type="primary"):
