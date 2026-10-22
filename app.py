@@ -27,9 +27,18 @@ def check_password():
         return True
 
     st.title("パスワード保護")
-    password_input = st.text_input("パスワードを入力してください", type="password")
+    # フォームにすることで、入力欄でEnterキーを押してログインできるようにする。
+    # 「既存のパスワード」と明記し、ブラウザの新規パスワード生成候補が出にくい表示にする。
+    with st.form("login_form", clear_on_submit=False):
+        password_input = st.text_input(
+            "ログイン用のパスワードを入力してください",
+            type="password",
+            key="login_password_input",
+            help="設定済みのパスワードを入力してください。",
+        )
+        login_submitted = st.form_submit_button("ログイン", type="primary")
 
-    if st.button("ログイン", type="primary"):
+    if login_submitted:
         if password_input == "Inki1985":
             st.session_state["password_correct"] = True
             st.rerun()
@@ -3464,14 +3473,15 @@ def render_unit_checkboxes(data, path=(), depth=0):
                 unit_path = path + (name,)
                 unit_label = " > ".join(unit_path)
                 checkbox_key = "unit_" + "__".join(unit_path)
-                label_col, checkbox_col = st.columns([10, 1])
-                label_col.markdown(f"{'　' * depth}└ {name}（全 {len(value)} 問）")
-                checkbox_col.checkbox(
-                    "選択",
-                    key=checkbox_key,
-                    help=unit_label,
-                    label_visibility="collapsed",
-                )
+                with st.container(border=True):
+                    label_col, checkbox_col = st.columns([10, 1], vertical_alignment="center")
+                    label_col.markdown(f"{'　' * depth}└ {name}（全 {len(value)} 問）")
+                    checkbox_col.checkbox(
+                        "選択",
+                        key=checkbox_key,
+                        help=unit_label,
+                        label_visibility="collapsed",
+                    )
 
 
 def get_selected_units(all_units):
@@ -3499,20 +3509,22 @@ if st.session_state["selection_step"] == "units":
     st.write("小単元をすべて表示しています。出題したい小単元にチェックを入れ、最後に「選択した単元を決定」を押してください。ここでは問題数を指定しません。")
 
     for top_key, top_val in question_database.items():
-        st.markdown(f"### {top_key}")
-        if isinstance(top_val, dict):
-            render_unit_checkboxes(top_val, (top_key,), depth=0)
-        elif isinstance(top_val, list):
-            unit_path = (top_key,)
-            checkbox_key = "unit_" + "__".join(unit_path)
-            label_col, checkbox_col = st.columns([10, 1])
-            label_col.markdown(f"{top_key}（全 {len(top_val)} 問）")
-            checkbox_col.checkbox(
-                "選択",
-                key=checkbox_key,
-                help=top_key,
-                label_visibility="collapsed",
-            )
+        with st.container(border=True):
+            st.markdown(f"### {top_key}")
+            if isinstance(top_val, dict):
+                render_unit_checkboxes(top_val, (top_key,), depth=0)
+            elif isinstance(top_val, list):
+                unit_path = (top_key,)
+                checkbox_key = "unit_" + "__".join(unit_path)
+                with st.container(border=True):
+                    label_col, checkbox_col = st.columns([10, 1], vertical_alignment="center")
+                    label_col.markdown(f"{top_key}（全 {len(top_val)} 問）")
+                    checkbox_col.checkbox(
+                        "選択",
+                        key=checkbox_key,
+                        help=top_key,
+                        label_visibility="collapsed",
+                    )
 
     st.markdown("---")
     if st.button("選択した単元を決定", type="primary"):
@@ -3532,15 +3544,21 @@ else:
     selected_units_config = {}
     for unit_label, questions in st.session_state.get("selected_units", {}).items():
         max_q = len(questions)
-        st.markdown(f"**{unit_label}**（全 {max_q} 問）")
-        num_q = st.number_input(
-            "出題数",
-            min_value=1,
-            max_value=max_q,
-            value=1,
-            step=1,
-            key="count_" + unit_label,
-        )
+        with st.container(border=True):
+            label_col, count_col, suffix_col = st.columns(
+                [8, 2, 1], vertical_alignment="center"
+            )
+            label_col.markdown(f"**{unit_label}**（全 {max_q} 問）")
+            num_q = count_col.number_input(
+                "出題数",
+                min_value=1,
+                max_value=max_q,
+                value=1,
+                step=1,
+                key="count_" + unit_label,
+                label_visibility="collapsed",
+            )
+            suffix_col.markdown("問")
         selected_units_config[unit_label] = (questions, int(num_q))
 
     st.markdown("---")
