@@ -3439,88 +3439,122 @@ def compile_latex_to_pdf(latex_code: str) -> bytes:
 
 
 # ---------------------------------------------------------
-# メイン画面のUI（階層構造の展開）
+# 単元選択・出題数設定・PDFプレビュー
 # ---------------------------------------------------------
+def collect_units(data, path=()):
+    """問題データをたどり、問題リストを持つ最小単位を集める。"""
+    units = []
+    if isinstance(data, list):
+        if data:
+            units.append((path, data))
+    elif isinstance(data, dict):
+        for name, value in data.items():
+            units.extend(collect_units(value, path + (name,)))
+    return units
+
+
+def render_unit_checkboxes(data, path=(), depth=0):
+    """階層を表示しながら、すべての小単元にチェックボックスを表示する。"""
+    if isinstance(data, dict):
+        for name, value in data.items():
+            if isinstance(value, dict):
+                st.markdown(f"{'　' * depth}**{name}**")
+                render_unit_checkboxes(value, path + (name,), depth + 1)
+            elif isinstance(value, list):
+                unit_path = path + (name,)
+                unit_label = " > ".join(unit_path)
+                checkbox_key = "unit_" + "__".join(unit_path)
+                label_col, checkbox_col = st.columns([10, 1])
+                label_col.markdown(f"{'　' * depth}└ {name}（全 {len(value)} 問）")
+                checkbox_col.checkbox(
+                    "選択",
+                    key=checkbox_key,
+                    help=unit_label,
+                    label_visibility="collapsed",
+                )
+
+
+def get_selected_units(all_units):
+    """選択画面のチェック状態から、選択済み小単元を取得する。"""
+    selected = {}
+    for path, questions in all_units:
+        checkbox_key = "unit_" + "__".join(path)
+        if st.session_state.get(checkbox_key, False):
+            selected[" > ".join(path)] = questions
+    return selected
+
+
 st.title("数学のガチャ")
-
-st.markdown("---")
-st.subheader("分野の選択と出題数設定")
-st.write("各分野・教科書の階層を展開し、出題したい項目にチェックを入れて出題数を設定してください。")
-
-selected_units_config = {}
-
-for top_key, top_val in question_database.items():
-    if top_key == "教科書":
-        is_textbook = st.checkbox("教科書", key="chk_textbook")
-        if is_textbook:
-            for subject, chapters in top_val.items():
-                is_subj = st.checkbox(f"  └ {subject}", key=f"chk_{subject}")
-                if is_subj:
-                    for chap_name, sections in chapters.items():
-                        is_chap = st.checkbox(f"    └ {chap_name}", key=f"chk_{subject}_{chap_name}")
-                        if is_chap:
-                            for sec_name, subsections in sections.items():
-                                if isinstance(subsections, dict):
-                                    is_sec = st.checkbox(f"      └ {sec_name}", key=f"chk_{subject}_{chap_name}_{sec_name}")
-                                    if is_sec:
-                                        for sub_name, q_list in subsections.items():
-                                            sub_chk = st.checkbox(f"        └ {sub_name} （全 {len(q_list)} 問）", key=f"chk_{subject}_{chap_name}_{sec_name}_{sub_name}")
-                                            if sub_chk:
-                                                max_q = len(q_list)
-                                                num_q = st.number_input(
-                                                    f"          出題数 (最大 {max_q}問)",
-                                                    min_value=0, max_value=max_q, value=0, step=1,
-                                                    key=f"num_{subject}_{chap_name}_{sec_name}_{sub_name}"
-                                                )
-                                                if num_q > 0:
-                                                    selected_units_config[f"{subject} > {chap_name} > {sec_name} > {sub_name}"] = (q_list, int(num_q))
-                                elif isinstance(subsections, list):
-                                    q_list = subsections
-                                    sub_chk = st.checkbox(f"      └ {sec_name} （全 {len(q_list)} 問）", key=f"chk_{subject}_{chap_name}_{sec_name}")
-                                    if sub_chk:
-                                        max_q = len(q_list)
-                                        num_q = st.number_input(
-                                            f"        出題数 (最大 {max_q}問)",
-                                            min_value=0, max_value=max_q, value=0, step=1,
-                                            key=f"num_{subject}_{chap_name}_{sec_name}"
-                                        )
-                                        if num_q > 0:
-                                            selected_units_config[f"{subject} > {chap_name} > {sec_name}"] = (q_list, int(num_q))
-    else:
-        # その他の単元（複素数、二次関数、三角関数、指数対数など）
-        is_major_checked = st.checkbox(f"{top_key}", key=f"maj_{top_key}")
-        if is_major_checked:
-            if isinstance(top_val, list):
-                sub_chk = st.checkbox(f" └ {top_key} （全 {len(top_val)} 問）", key=f"sub_list_{top_key}")
-                if sub_chk:
-                    max_q = len(top_val)
-                    num_q = st.number_input(
-                        f"  出題数 (最大 {max_q}問)",
-                        min_value=0, max_value=max_q, value=0, step=1,
-                        key=f"num_list_{top_key}"
-                    )
-                    if num_q > 0:
-                        selected_units_config[top_key] = (top_val, int(num_q))
-            elif isinstance(top_val, dict):
-                for sub_cat, q_list in top_val.items():
-                    sub_chk = st.checkbox(f" └ {sub_cat} （全 {len(q_list)} 問）", key=f"sub_dict_{top_key}_{sub_cat}")
-                    if sub_chk:
-                        max_q = len(q_list)
-                        num_q = st.number_input(
-                            f"  出題数 (最大 {max_q}問)",
-                            min_value=0, max_value=max_q, value=0, step=1,
-                            key=f"num_dict_{top_key}_{sub_cat}"
-                        )
-                        if num_q > 0:
-                            selected_units_config[f"{top_key} > {sub_cat}"] = (q_list, int(num_q))
-
 st.markdown("---")
 
-# プレビューを表示ボタン
-if st.button("プレビューを表示", type="primary"):
-    if not selected_units_config:
-        st.warning("項目にチェック를入れ、1問以上の問題数を入力してください。")
-    else:
+# 全小単元をあらかじめ一覧化
+all_units = collect_units(question_database)
+
+# 画面遷移用の状態を初期化
+if "selection_step" not in st.session_state:
+    st.session_state["selection_step"] = "units"
+
+if st.session_state["selection_step"] == "units":
+    st.subheader("① 出題する単元を選択")
+    st.write("小単元をすべて表示しています。出題したい小単元にチェックを入れ、最後に「選択した単元を決定」を押してください。ここでは問題数を指定しません。")
+
+    for top_key, top_val in question_database.items():
+        st.markdown(f"### {top_key}")
+        if isinstance(top_val, dict):
+            render_unit_checkboxes(top_val, (top_key,), depth=0)
+        elif isinstance(top_val, list):
+            unit_path = (top_key,)
+            checkbox_key = "unit_" + "__".join(unit_path)
+            label_col, checkbox_col = st.columns([10, 1])
+            label_col.markdown(f"{top_key}（全 {len(top_val)} 問）")
+            checkbox_col.checkbox(
+                "選択",
+                key=checkbox_key,
+                help=top_key,
+                label_visibility="collapsed",
+            )
+
+    st.markdown("---")
+    if st.button("選択した単元を決定", type="primary"):
+        selected = get_selected_units(all_units)
+        if not selected:
+            st.warning("少なくとも1つの小単元を選択してください。")
+        else:
+            st.session_state["selected_units"] = selected
+            st.session_state["selection_step"] = "counts"
+            st.session_state.pop("pdf_data", None)
+            st.rerun()
+
+else:
+    st.subheader("② 単元ごとの問題数を設定")
+    st.write("選択した小単元だけを表示しています。各単元から出題する問題数を決めてください。")
+
+    selected_units_config = {}
+    for unit_label, questions in st.session_state.get("selected_units", {}).items():
+        max_q = len(questions)
+        st.markdown(f"**{unit_label}**（全 {max_q} 問）")
+        num_q = st.number_input(
+            "出題数",
+            min_value=1,
+            max_value=max_q,
+            value=1,
+            step=1,
+            key="count_" + unit_label,
+        )
+        selected_units_config[unit_label] = (questions, int(num_q))
+
+    st.markdown("---")
+    back_col, preview_col = st.columns([1, 2])
+    with back_col:
+        if st.button("単元選択に戻る"):
+            st.session_state["selection_step"] = "units"
+            st.session_state.pop("pdf_data", None)
+            st.rerun()
+
+    with preview_col:
+        preview_clicked = st.button("プレビューを表示", type="primary")
+
+    if preview_clicked:
         # 修正点: \package -> \usepackage
         latex_source = f"""
         \\documentclass[11pt,a4paper]{{ltjsarticle}}
@@ -3564,14 +3598,14 @@ if st.button("プレビューを表示", type="primary"):
             except Exception:
                 st.error("PDFの生成に失敗しました。")
 
-# 生成されたPDFがある場合の表示
-if "pdf_data" in st.session_state:
-    st.markdown("---")
-    render_pdf_preview_and_print(st.session_state["pdf_data"])
+    # 生成されたPDFがある場合の表示
+    if "pdf_data" in st.session_state:
+        st.markdown("---")
+        render_pdf_preview_and_print(st.session_state["pdf_data"])
 
-    st.download_button(
-        label="生成されたPDFをダウンロード",
-        data=st.session_state["pdf_data"],
-        file_name="math_ガチャ.pdf",
-        mime="application/pdf",
-    )
+        st.download_button(
+            label="生成されたPDFをダウンロード",
+            data=st.session_state["pdf_data"],
+            file_name="math_ガチャ.pdf",
+            mime="application/pdf",
+        )
