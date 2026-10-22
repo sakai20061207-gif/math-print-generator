@@ -3507,10 +3507,11 @@ def render_unit_checkboxes(all_units):
             else:
                 break
 
-        # 最小単元（右端の列）がある行では、その一つ手前の階層名を省き、
-        # 最小単元名を残す。右端が空欄の行は既存の表示をそのまま保つ。
+        # 最小単元がある行では、一つ手前の階層名を取り除き、
+        # 最小単元名をその空欄へ左詰めする。右端が空欄の行は変更しない。
         if shown[4]:
-            shown[3] = ""
+            shown[3] = shown[4]
+            shown[4] = ""
 
         checkbox_key = "unit_" + "__".join(unit_path)
         rows.append({
