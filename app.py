@@ -3568,17 +3568,19 @@ if "selection_step" not in st.session_state:
 if st.session_state["selection_step"] == "units":
     st.markdown(
         """<style>
-        /* 単元選択表：各行の列幅・境界線・余白を統一 */
+        /* 単元選択表：十分な横幅を確保し、全行の列位置と罫線を統一 */
         div[class*="st-key-unit_table_row_"] {
             margin: 0 !important;
             padding: 0 !important;
+            width: 100% !important;
+            min-width: 1100px !important;
         }
         div[class*="st-key-unit_table_row_"] > div[data-testid="stVerticalBlock"] {
             gap: 0 !important;
         }
         div[class*="st-key-unit_table_row_"] [data-testid="stHorizontalBlock"] {
             display: grid !important;
-            grid-template-columns: 1.2fr 1.3fr 1.5fr 1.7fr 3.2fr 0.9fr 0.5fr !important;
+            grid-template-columns: minmax(110px, 1.1fr) minmax(100px, 1fr) minmax(130px, 1.25fr) minmax(140px, 1.35fr) minmax(320px, 3.2fr) minmax(90px, 0.9fr) minmax(60px, 0.55fr) !important;
             gap: 0 !important;
             margin: 0 !important;
             padding: 0 !important;
@@ -3586,11 +3588,14 @@ if st.session_state["selection_step"] == "units":
             border-right: 1px solid #a8a8a8;
             border-bottom: 1px solid #c2c2c2;
             align-items: stretch !important;
+            box-sizing: border-box !important;
         }
         div[class*="st-key-unit_table_row_"] [data-testid="column"] {
             width: auto !important;
             min-width: 0 !important;
-            padding: 0.12rem 0.4rem !important;
+            padding: 0.28rem 0.55rem !important;
+            box-sizing: border-box !important;
+            overflow-wrap: normal !important;
             margin: 0 !important;
             border-right: 1px solid #c2c2c2;
             display: flex;
@@ -3605,7 +3610,7 @@ if st.session_state["selection_step"] == "units":
             margin: 0 !important;
             padding: 0 !important;
             line-height: 1.25 !important;
-            overflow-wrap: anywhere;
+            overflow-wrap: break-word;
         }
         div[class*="st-key-unit_table_row_"] [data-testid="stCheckbox"] {
             margin: 0 !important;
