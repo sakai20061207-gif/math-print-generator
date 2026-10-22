@@ -3521,12 +3521,28 @@ def render_unit_checkboxes(all_units):
 
     columns = ["階層1", "階層2", "階層3", "階層4", "最小単元", "問題数", "選択"]
     df = pd.DataFrame([{key: row[key] for key in columns} for row in rows])
+    # データエディタの列見出し（薄いグレーの行）を隠し、
+    # 全行が画面内に収まる高さにする。表の外側ではなくページ上に直接表示する。
+    st.markdown(
+        """
+        <style>
+        [data-testid="stDataEditor"] [role="columnheader"] {
+            display: none !important;
+        }
+        [data-testid="stDataEditor"] [role="row"] {
+            min-height: 34px !important;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
     edited = st.data_editor(
         df,
         key="unit_selection_editor",
         hide_index=True,
         num_rows="fixed",
         use_container_width=True,
+        height=max(80, len(df) * 34 + 8),
         row_height=34,
         disabled=columns[:-1],
         column_config={
