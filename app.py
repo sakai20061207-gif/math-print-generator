@@ -3488,37 +3488,43 @@ def clean_unit_title(name):
     return name
 
 
-def render_unit_checkboxes(data, path=(), depth=0):
-    """最小単元を階層別の列に分け、罫線で区切った一覧表として表示する。"""
-    if not isinstance(data, dict):
-        return
+def render_unit_checkboxes(all_units):
+    """最小単元を一覧表で表示し、連続する親単元名は一度だけ表示する。"""
+    previous_path = []
+    for unit_path, questions in all_units:
+        cleaned_path = [clean_unit_title(part) for part in unit_path]
+        # 表示列は「教科書・教材／科目／分野／小単元」。
+        padded_path = (cleaned_path + [""] * 4)[:4]
+        display_path = []
+        for i, title in enumerate(padded_path):
+            # 同じ親単元が連続している間は空欄にして、見出しを繰り返さない。
+            same_parent = (
+                i < len(previous_path)
+                and i < len(cleaned_path)
+                and i < len(previous_path)
+                and padded_path[i] == previous_path[i]
+                and all(padded_path[j] == previous_path[j] for j in range(i))
+            )
+            display_path.append("" if title and same_parent else title)
 
-    for name, value in data.items():
-        if isinstance(value, dict):
-            render_unit_checkboxes(value, path + (name,), depth + 1)
-        elif isinstance(value, list):
-            unit_path = path + (name,)
-            # 表示用の階層名から「第1章」「第1節」などの番号を取り除く。
-            cleaned_path = [clean_unit_title(part) for part in unit_path]
-            # 親階層を別々の列に配置し、最小単元を1行ずつ並べる。
-            padded_path = (cleaned_path + [""] * 4)[:4]
-            subject_col, middle_col, section_col, unit_col, count_col, checkbox_col = st.columns(
-                [1.2, 1.5, 1.8, 3.8, 1.0, 0.55], vertical_alignment="center"
-            )
-            subject_col.markdown(padded_path[0] or "&nbsp;", unsafe_allow_html=True)
-            middle_col.markdown(padded_path[1] or "&nbsp;", unsafe_allow_html=True)
-            section_col.markdown(padded_path[2] or "&nbsp;", unsafe_allow_html=True)
-            unit_col.markdown(padded_path[3] or "&nbsp;", unsafe_allow_html=True)
-            count_col.markdown(f"全{len(value)}問")
-            checkbox_key = "unit_" + "__".join(unit_path)
-            checkbox_col.checkbox(
-                "選択", key=checkbox_key, help=" > ".join(unit_path),
-                label_visibility="collapsed",
-            )
-            st.markdown(
-                "<hr style='margin:0; border:0; border-top:1px solid rgba(128,128,128,0.55);'>",
-                unsafe_allow_html=True,
-            )
+        subject_col, middle_col, section_col, unit_col, count_col, checkbox_col = st.columns(
+            [1.2, 1.5, 1.8, 3.8, 1.0, 0.55], vertical_alignment="center"
+        )
+        for col, title in zip(
+            [subject_col, middle_col, section_col, unit_col], display_path
+        ):
+            col.markdown(title or "&nbsp;", unsafe_allow_html=True)
+        count_col.markdown(f"全{len(questions)}問")
+        checkbox_key = "unit_" + "__".join(unit_path)
+        checkbox_col.checkbox(
+            "選択", key=checkbox_key, help=" > ".join(unit_path),
+            label_visibility="collapsed",
+        )
+        st.markdown(
+            "<hr style='margin:0; border:0; border-top:1px solid rgba(128,128,128,0.55);'>",
+            unsafe_allow_html=True,
+        )
+        previous_path = padded_path
 
 
 def get_selected_units(all_units):
@@ -3553,18 +3559,7 @@ if st.session_state["selection_step"] == "units":
         "<hr style='margin:0; border:0; border-top:2px solid rgba(128,128,128,0.8);'>",
         unsafe_allow_html=True,
     )
-    for top_key, top_val in question_database.items():
-        if isinstance(top_val, dict):
-            render_unit_checkboxes(top_val, (top_key,), depth=0)
-        elif isinstance(top_val, list):
-            checkbox_key = "unit_" + "__".join((top_key,))
-            label_col, middle_col, section_col, unit_col, count_col, checkbox_col = st.columns(
-                [1.2, 1.5, 1.8, 3.8, 1.0, 0.55], vertical_alignment="center"
-            )
-            label_col.markdown(clean_unit_title(top_key))
-            count_col.markdown(f"全{len(top_val)}問")
-            checkbox_col.checkbox("選択", key=checkbox_key, help=top_key, label_visibility="collapsed")
-            st.markdown("<hr style='margin:0; border:0; border-top:1px solid rgba(128,128,128,0.55);'>", unsafe_allow_html=True)
+    render_unit_checkboxes(all_units)
 
     st.markdown("---")
     if st.button("選択した単元を決定", type="primary"):
