@@ -26,9 +26,67 @@ def check_password():
     if st.session_state["password_correct"]:
         return True
 
-    st.title("パスワード保護")
-    # フォームにすることで、Enterキーでもログインできるようにする。
-    # ブラウザの自動入力・新規パスワード生成を抑制する属性を設定する。
+    # ログイン画面専用のスタイル。画面中央に配置し、青系のボタンにする。
+    st.markdown(
+        """<style>
+        .stAppViewContainer .main .block-container {
+            min-height: 100vh;
+            padding-top: 0.5rem;
+            padding-bottom: 0.5rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        div[data-testid="stForm"] {
+            border: none;
+            padding: 0;
+        }
+        div[data-testid="stForm"] label {
+            color: #334155;
+            font-size: 0.95rem;
+        }
+        div[data-testid="stForm"] input[type="password"] {
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+        }
+        div[data-testid="stForm"] input[type="password"]:focus {
+            border-color: #2563eb;
+            box-shadow: 0 0 0 1px #2563eb;
+        }
+        div[data-testid="stForm"] button[kind="primaryFormSubmit"],
+        div[data-testid="stForm"] button[kind="primary"] {
+            background: #2563eb !important;
+            border: 1px solid #2563eb !important;
+            color: white !important;
+            border-radius: 8px !important;
+            min-height: 2.7rem;
+            padding: 0.5rem 1.5rem;
+        }
+        div[data-testid="stForm"] button[kind="primaryFormSubmit"]:hover,
+        div[data-testid="stForm"] button[kind="primary"]:hover {
+            background: #1d4ed8 !important;
+            border-color: #1d4ed8 !important;
+        }
+        </style>""",
+        unsafe_allow_html=True,
+    )
+
+    # 左右の余白列でログイン欄を中央に配置する。
+    left, center, right = st.columns([1, 1.4, 1])
+    with center:
+        with st.form("login_form", clear_on_submit=False):
+            password_input = st.text_input(
+                "パスワード",
+                type="password",
+                key="login_password_input",
+                autocomplete="off",
+                placeholder="パスワード",
+            )
+            login_submitted = st.form_submit_button(
+                "ログイン", type="primary", use_container_width=True
+            )
+
+    # ブラウザの自動入力・新規パスワード生成候補を抑制する。
     st.markdown(
         """<script>
         const disablePasswordSuggestions = () => {
@@ -47,21 +105,14 @@ def check_password():
         </script>""",
         unsafe_allow_html=True,
     )
-    with st.form("login_form", clear_on_submit=False):
-        password_input = st.text_input(
-            "ログイン用のパスワードを入力してください",
-            type="password",
-            key="login_password_input",
-            autocomplete="off",
-        )
-        login_submitted = st.form_submit_button("ログイン", type="primary")
 
     if login_submitted:
         if password_input == "Inki1985":
             st.session_state["password_correct"] = True
             st.rerun()
         else:
-            st.error("パスワードが違います")
+            with center:
+                st.error("パスワードが違います")
 
     return False
 
