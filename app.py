@@ -3489,61 +3489,59 @@ def clean_unit_title(name):
 
 
 def render_unit_checkboxes(all_units):
-    """最小単元を表形式で表示し、親単元名は連続する行で繰り返さない。"""
+    """最小単元を、列幅が崩れない編集可能な表として表示する。"""
+    import pandas as pd
+
+    rows = []
     previous_path = []
-    widths = [1.2, 1.3, 1.5, 1.7, 3.2, 0.9, 0.5]
-
-    for row_index, (unit_path, questions) in enumerate(all_units):
-        cleaned_path = [clean_unit_title(part) for part in unit_path]
-        first_levels = (cleaned_path[:3] + [""] * 3)[:3]
-
-        # 4階層目以降は親単元と最小単元に分けて表示する。
-        if len(cleaned_path) >= 5:
-            parent_unit = " / ".join(cleaned_path[3:-1])
-            leaf_unit = cleaned_path[-1]
-        elif len(cleaned_path) == 4:
-            parent_unit = ""
-            leaf_unit = cleaned_path[-1]
-        else:
-            parent_unit = ""
-            leaf_unit = cleaned_path[-1] if cleaned_path else ""
-
-        current_display = first_levels + [parent_unit, leaf_unit]
-        previous_display = (previous_path[:3] + [""] * max(0, 3 - len(previous_path)))[:3]
-        previous_parent = " / ".join(previous_path[3:-1]) if len(previous_path) >= 5 else ""
-
-        display_values = []
-        for i, title in enumerate(current_display):
-            if i < 3:
-                same_parent = (
-                    bool(title)
-                    and i < len(previous_display)
-                    and title == previous_display[i]
-                    and all(current_display[j] == previous_display[j] for j in range(i))
-                )
-                display_values.append("" if same_parent else title)
-            elif i == 3:
-                display_values.append("" if title and title == previous_parent else title)
+    for unit_path, questions in all_units:
+        cleaned = [clean_unit_title(part) for part in unit_path]
+        levels = (cleaned + [""] * 5)[:5]
+        shown = levels.copy()
+        # 親単元は同じまとまりの先頭行だけに表示する。
+        for i in range(min(4, len(cleaned), len(previous_path))):
+            if cleaned[i] == previous_path[i] and all(
+                cleaned[j] == previous_path[j] for j in range(i)
+            ):
+                shown[i] = ""
             else:
-                display_values.append(title)
+                break
+        checkbox_key = "unit_" + "__".join(unit_path)
+        rows.append({
+            "階層1": shown[0],
+            "階層2": shown[1],
+            "階層3": shown[2],
+            "階層4": shown[3],
+            "最小単元": shown[4],
+            "問題数": f"全{len(questions)}問",
+            "選択": bool(st.session_state.get(checkbox_key, False)),
+            "_path": unit_path,
+        })
+        previous_path = cleaned
 
-        # 各行を固有のコンテナに入れ、CSSを単元表だけに適用する。
-        with st.container(key=f"unit_table_row_{row_index}"):
-            cols = st.columns(widths, vertical_alignment="center", gap="small")
-            for col, title in zip(cols[:5], display_values):
-                col.markdown(title if title else "&nbsp;", unsafe_allow_html=True)
-
-            cols[5].markdown(f"全{len(questions)}問")
-            checkbox_key = "unit_" + "__".join(unit_path)
-            cols[6].checkbox(
-                "選択",
-                key=checkbox_key,
-                help=" > ".join(unit_path),
-                label_visibility="collapsed",
-            )
-
-        previous_path = cleaned_path
-
+    columns = ["階層1", "階層2", "階層3", "階層4", "最小単元", "問題数", "選択"]
+    df = pd.DataFrame([{key: row[key] for key in columns} for row in rows])
+    edited = st.data_editor(
+        df,
+        key="unit_selection_editor",
+        hide_index=True,
+        num_rows="fixed",
+        use_container_width=True,
+        row_height=34,
+        disabled=columns[:-1],
+        column_config={
+            "階層1": st.column_config.TextColumn("", width="small"),
+            "階層2": st.column_config.TextColumn("", width="small"),
+            "階層3": st.column_config.TextColumn("", width="small"),
+            "階層4": st.column_config.TextColumn("", width="medium"),
+            "最小単元": st.column_config.TextColumn("", width="large"),
+            "問題数": st.column_config.TextColumn("", width="small"),
+            "選択": st.column_config.CheckboxColumn("", width="small"),
+        },
+    )
+    for i, row in enumerate(rows):
+        checkbox_key = "unit_" + "__".join(row["_path"])
+        st.session_state[checkbox_key] = bool(edited.iloc[i]["選択"])
 
 def get_selected_units(all_units):
     """選択画面のチェック状態から、選択済み小単元を取得する。"""
@@ -3566,63 +3564,6 @@ if "selection_step" not in st.session_state:
     st.session_state["selection_step"] = "units"
 
 if st.session_state["selection_step"] == "units":
-    st.markdown(
-        """<style>
-        /* 単元選択表：十分な横幅を確保し、全行の列位置と罫線を統一 */
-        div[class*="st-key-unit_table_row_"] {
-            margin: 0 !important;
-            padding: 0 !important;
-            width: 100% !important;
-            min-width: 1100px !important;
-        }
-        div[class*="st-key-unit_table_row_"] > div[data-testid="stVerticalBlock"] {
-            gap: 0 !important;
-        }
-        div[class*="st-key-unit_table_row_"] [data-testid="stHorizontalBlock"] {
-            display: grid !important;
-            grid-template-columns: minmax(110px, 1.1fr) minmax(100px, 1fr) minmax(130px, 1.25fr) minmax(140px, 1.35fr) minmax(320px, 3.2fr) minmax(90px, 0.9fr) minmax(60px, 0.55fr) !important;
-            gap: 0 !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            border-left: 1px solid #a8a8a8;
-            border-right: 1px solid #a8a8a8;
-            border-bottom: 1px solid #c2c2c2;
-            align-items: stretch !important;
-            box-sizing: border-box !important;
-        }
-        div[class*="st-key-unit_table_row_"] [data-testid="column"] {
-            width: auto !important;
-            min-width: 0 !important;
-            padding: 0.28rem 0.55rem !important;
-            box-sizing: border-box !important;
-            overflow-wrap: normal !important;
-            margin: 0 !important;
-            border-right: 1px solid #c2c2c2;
-            display: flex;
-            align-items: center;
-            justify-content: flex-start;
-        }
-        div[class*="st-key-unit_table_row_"] [data-testid="column"]:last-child {
-            border-right: 0;
-            justify-content: center;
-        }
-        div[class*="st-key-unit_table_row_"] p {
-            margin: 0 !important;
-            padding: 0 !important;
-            line-height: 1.25 !important;
-            overflow-wrap: break-word;
-        }
-        div[class*="st-key-unit_table_row_"] [data-testid="stCheckbox"] {
-            margin: 0 !important;
-            padding: 0 !important;
-        }
-        div[class*="st-key-unit_table_row_"] [data-testid="stCheckbox"] label {
-            margin: 0 !important;
-            padding: 0 !important;
-        }
-        </style>""",
-        unsafe_allow_html=True,
-    )
     st.subheader("① 出題する単元を選択")
     # 列見出しは省略し、単元一覧だけをコンパクトに表示する。
     render_unit_checkboxes(all_units)
