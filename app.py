@@ -3419,7 +3419,7 @@ def render_pdf_preview_and_print(pdf_bytes: bytes):
         <meta charset="utf-8">
         <style>
             .print-btn {{
-                background-color: #ff4b4b;
+                background-color: #2563eb;
                 color: white;
                 border: none;
                 padding: 12px 24px;
@@ -3433,7 +3433,7 @@ def render_pdf_preview_and_print(pdf_bytes: bytes):
                 font-family: sans-serif;
             }}
             .print-btn:hover {{
-                background-color: #ff2222;
+                background-color: #1d4ed8;
             }}
         </style>
     </head>
