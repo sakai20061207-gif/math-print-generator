@@ -27,14 +27,32 @@ def check_password():
         return True
 
     st.title("パスワード保護")
-    # フォームにすることで、入力欄でEnterキーを押してログインできるようにする。
-    # 「既存のパスワード」と明記し、ブラウザの新規パスワード生成候補が出にくい表示にする。
+    # フォームにすることで、Enterキーでもログインできるようにする。
+    # ブラウザの自動入力・新規パスワード生成を抑制する属性を設定する。
+    st.markdown(
+        """<script>
+        const disablePasswordSuggestions = () => {
+          const doc = window.parent.document;
+          doc.querySelectorAll('input[type="password"]').forEach((input) => {
+            input.setAttribute('autocomplete', 'off');
+            input.setAttribute('data-lpignore', 'true');
+            input.setAttribute('data-1p-ignore', 'true');
+            input.setAttribute('autocapitalize', 'off');
+            input.setAttribute('spellcheck', 'false');
+          });
+        };
+        disablePasswordSuggestions();
+        setTimeout(disablePasswordSuggestions, 300);
+        setTimeout(disablePasswordSuggestions, 1000);
+        </script>""",
+        unsafe_allow_html=True,
+    )
     with st.form("login_form", clear_on_submit=False):
         password_input = st.text_input(
             "ログイン用のパスワードを入力してください",
             type="password",
             key="login_password_input",
-            help="設定済みのパスワードを入力してください。",
+            autocomplete="off",
         )
         login_submitted = st.form_submit_button("ログイン", type="primary")
 
@@ -3462,26 +3480,39 @@ def collect_units(data, path=()):
     return units
 
 
+def clean_unit_title(name):
+    """表示名から「第1章」「第1節」などの番号部分を取り除く。"""
+    import re
+    name = re.sub(r"^第[0-9０-９一二三四五六七八九十百]+章\s*", "", name)
+    name = re.sub(r"^第[0-9０-９一二三四五六七八九十百]+節\s*", "", name)
+    return name
+
+
 def render_unit_checkboxes(data, path=(), depth=0):
-    """階層を表示しながら、すべての小単元にチェックボックスを表示する。"""
-    if isinstance(data, dict):
-        for name, value in data.items():
-            if isinstance(value, dict):
-                st.markdown(f"{'　' * depth}**{name}**")
-                render_unit_checkboxes(value, path + (name,), depth + 1)
-            elif isinstance(value, list):
-                unit_path = path + (name,)
-                unit_label = " > ".join(unit_path)
-                checkbox_key = "unit_" + "__".join(unit_path)
-                with st.container(border=True):
-                    label_col, checkbox_col = st.columns([10, 1], vertical_alignment="center")
-                    label_col.markdown(f"{'　' * depth}└ {name}（全 {len(value)} 問）")
-                    checkbox_col.checkbox(
-                        "選択",
-                        key=checkbox_key,
-                        help=unit_label,
-                        label_visibility="collapsed",
-                    )
+    """章・節番号を省き、最小単元を表形式に近いコンパクトな行で表示する。"""
+    if not isinstance(data, dict):
+        return
+
+    for name, value in data.items():
+        display_name = clean_unit_title(name)
+        if isinstance(value, dict):
+            # 大分野・中分野は見出しとして残し、章・節の番号だけを除く。
+            st.markdown(f"**{'　' * depth}{display_name}**")
+            render_unit_checkboxes(value, path + (name,), depth + 1)
+        elif isinstance(value, list):
+            unit_path = path + (name,)
+            checkbox_key = "unit_" + "__".join(unit_path)
+            label_col, count_col, checkbox_col = st.columns([10, 2, 1], vertical_alignment="center")
+            label_col.markdown(f"{'　' * depth}{display_name}")
+            count_col.markdown(f"全 {len(value)} 問")
+            checkbox_col.checkbox(
+                "選択", key=checkbox_key, help=" > ".join(unit_path),
+                label_visibility="collapsed",
+            )
+            st.markdown(
+                "<hr style='margin:0; border:0; border-top:1px solid rgba(128,128,128,0.35);'>",
+                unsafe_allow_html=True,
+            )
 
 
 def get_selected_units(all_units):
@@ -3508,23 +3539,18 @@ if st.session_state["selection_step"] == "units":
     st.subheader("① 出題する単元を選択")
     st.write("小単元をすべて表示しています。出題したい小単元にチェックを入れ、最後に「選択した単元を決定」を押してください。ここでは問題数を指定しません。")
 
+    # 表のように行を線で区切り、個々の小単元を枠で囲まないことで縦の長さを抑える。
     for top_key, top_val in question_database.items():
-        with st.container(border=True):
-            st.markdown(f"### {top_key}")
-            if isinstance(top_val, dict):
-                render_unit_checkboxes(top_val, (top_key,), depth=0)
-            elif isinstance(top_val, list):
-                unit_path = (top_key,)
-                checkbox_key = "unit_" + "__".join(unit_path)
-                with st.container(border=True):
-                    label_col, checkbox_col = st.columns([10, 1], vertical_alignment="center")
-                    label_col.markdown(f"{top_key}（全 {len(top_val)} 問）")
-                    checkbox_col.checkbox(
-                        "選択",
-                        key=checkbox_key,
-                        help=top_key,
-                        label_visibility="collapsed",
-                    )
+        st.markdown(f"### {clean_unit_title(top_key)}")
+        if isinstance(top_val, dict):
+            render_unit_checkboxes(top_val, (top_key,), depth=0)
+        elif isinstance(top_val, list):
+            checkbox_key = "unit_" + "__".join((top_key,))
+            label_col, count_col, checkbox_col = st.columns([10, 2, 1], vertical_alignment="center")
+            label_col.markdown(clean_unit_title(top_key))
+            count_col.markdown(f"全 {len(top_val)} 問")
+            checkbox_col.checkbox("選択", key=checkbox_key, help=top_key, label_visibility="collapsed")
+            st.markdown("<hr style='margin:0; border:0; border-top:1px solid rgba(128,128,128,0.35);'>", unsafe_allow_html=True)
 
     st.markdown("---")
     if st.button("選択した単元を決定", type="primary"):
@@ -3548,7 +3574,8 @@ else:
             label_col, count_col, suffix_col = st.columns(
                 [8, 2, 1], vertical_alignment="center"
             )
-            label_col.markdown(f"**{unit_label}**（全 {max_q} 問）")
+            display_unit_label = " > ".join(clean_unit_title(part) for part in unit_label.split(" > "))
+            label_col.markdown(f"**{display_unit_label}**（全 {max_q} 問）")
             num_q = count_col.number_input(
                 "出題数",
                 min_value=1,
