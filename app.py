@@ -3519,14 +3519,14 @@ def render_unit_checkboxes(all_units):
             "階層2": shown[1],
             "階層3": shown[2],
             "階層4": shown[3],
-            "最小単元": shown[4],
             "問題数": f"全{len(questions)}問",
             "選択": bool(st.session_state.get(checkbox_key, False)),
             "_path": unit_path,
         })
         previous_path = cleaned
 
-    columns = ["階層1", "階層2", "階層3", "階層4", "最小単元", "問題数", "選択"]
+    # 空欄になっていた「最小単元」列は削除し、単元名は階層4列に左詰めして表示する。
+    columns = ["階層1", "階層2", "階層3", "階層4", "問題数", "選択"]
     df = pd.DataFrame([{key: row[key] for key in columns} for row in rows])
     # データエディタの列見出し（薄いグレーの行）を隠し、
     # 全行が画面内に収まる高さにする。表の外側ではなくページ上に直接表示する。
@@ -3556,8 +3556,7 @@ def render_unit_checkboxes(all_units):
             "階層1": st.column_config.TextColumn("", width="small"),
             "階層2": st.column_config.TextColumn("", width="small"),
             "階層3": st.column_config.TextColumn("", width="small"),
-            "階層4": st.column_config.TextColumn("", width="medium"),
-            "最小単元": st.column_config.TextColumn("", width="large"),
+            "階層4": st.column_config.TextColumn("", width="large"),
             "問題数": st.column_config.TextColumn("", width="small"),
             "選択": st.column_config.CheckboxColumn("", width="small"),
         },
