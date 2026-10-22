@@ -3579,38 +3579,43 @@ if "selection_step" not in st.session_state:
 if st.session_state["selection_step"] == "units":
     st.markdown(
         """<style>
+        /* 単元一覧を詰めた表形式にする */
+        div[data-testid="stVerticalBlock"] > div:has(> div[data-testid="stHorizontalBlock"]) {
+            margin-top: 0 !important;
+            margin-bottom: 0 !important;
+            padding-top: 0 !important;
+            padding-bottom: 0 !important;
+        }
         div[data-testid="stHorizontalBlock"] {
+            gap: 0 !important;
+            margin: 0 !important;
             border-left: 1px solid #9a9a9a;
             border-right: 1px solid #9a9a9a;
+            border-bottom: 1px solid #b0b0b0;
+            min-height: 0 !important;
         }
         div[data-testid="stHorizontalBlock"] > div[data-testid="column"] {
             border-right: 1px solid #b0b0b0;
-            padding-left: 0.35rem;
-            padding-right: 0.35rem;
+            padding: 0.08rem 0.35rem !important;
+            margin: 0 !important;
         }
         div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:last-child {
             border-right: none;
+        }
+        div[data-testid="stHorizontalBlock"] p {
+            margin: 0 !important;
+            padding: 0 !important;
+            line-height: 1.25 !important;
+        }
+        div[data-testid="stCheckbox"] {
+            padding: 0 !important;
+            min-height: 0 !important;
         }
         </style>""",
         unsafe_allow_html=True,
     )
     st.subheader("① 出題する単元を選択")
-    st.write("小単元をすべて表示しています。出題したい小単元にチェックを入れ、最後に「選択した単元を決定」を押してください。ここでは問題数を指定しません。")
-
-    # 見出し行を設け、すべての最小単元を同じ列構成の一覧表にする。
-    header_cols = st.columns(
-        [1.2, 1.3, 1.5, 1.7, 3.2, 0.9, 0.5],
-        vertical_alignment="center",
-    )
-    for col, heading in zip(
-        header_cols,
-        ["教科書・教材", "科目", "分野", "小単元", "最小単元", "問題数", "選択"],
-    ):
-        col.markdown(f"**{heading}**")
-    st.markdown(
-        "<hr style='margin:0; border:0; border-top:2px solid rgba(128,128,128,0.8);'>",
-        unsafe_allow_html=True,
-    )
+    # 列見出しは省略し、単元一覧だけをコンパクトに表示する。
     render_unit_checkboxes(all_units)
 
     st.markdown("---")
