@@ -3514,7 +3514,7 @@ def render_pdf_preview_and_print(pdf_bytes: bytes):
 # 問題文は問題データベースにそのまま残し、図が必要な問題だけ
 # ここに対応するTikZコードを登録する。
 QUESTION_DIAGRAMS = {
-    "中心角と円周角の図において、角 $\theta$ を求めよ。": r"""
+    r"中心角と円周角の図において、角 $\theta$ を求めよ。": r"""
     \begin{center}
     \begin{tikzpicture}[scale=0.92, line cap=round, line join=round]
         % (1)
@@ -3569,7 +3569,16 @@ QUESTION_DIAGRAMS = {
 
 def get_question_diagram(question_text: str) -> str:
     """図形データが登録されている問題ならTikZコードを返す。"""
-    return QUESTION_DIAGRAMS.get(question_text, "")
+    diagram = QUESTION_DIAGRAMS.get(question_text)
+    if diagram:
+        return diagram
+
+    # 問題文中の空白・改行の違いを吸収して照合する。
+    normalized = " ".join(str(question_text).split())
+    for registered_text, registered_diagram in QUESTION_DIAGRAMS.items():
+        if " ".join(registered_text.split()) == normalized:
+            return registered_diagram
+    return ""
 
 
 # ---------------------------------------------------------
