@@ -3559,7 +3559,7 @@ QUESTION_DIAGRAMS = {
             % 反時計回り(Ob--B2--A2)に修正
             \pic[draw, angle radius=0.22cm] {angle=Ob--B2--A2};
             \pic[draw, angle radius=0.25cm] {angle=A2--C2--B2};
-            \node at (0.37,-0.85) {$62^\circ$};
+            \node at (0.3,-1.05) {$62^\circ$};
             \node at (0.92,0.32) {$\theta$};
             \node at (-1.85,1.25) {(2)};
         \end{scope}
