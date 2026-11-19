@@ -6,6 +6,7 @@ import random
 import subprocess
 import tempfile
 import shutil
+from pathlib import Path
 import fitz  # PyMuPDF
 from PIL import Image
 import streamlit as st
@@ -3576,11 +3577,42 @@ def get_question_diagram(question_text: str) -> str:
 # ---------------------------------------------------------
 # LaTeXコンパイル関数
 # ---------------------------------------------------------
+def find_diagram_directory() -> Path | None:
+    """アプリに同梱された diagrams フォルダを、実行場所に依存せず探す。"""
+    candidates = [
+        Path(__file__).resolve().parent / "diagrams",
+        Path.cwd() / "diagrams",
+        Path.cwd().parent / "diagrams",
+    ]
+    for candidate in candidates:
+        if candidate.is_dir():
+            return candidate
+    return None
+
+
 def compile_latex_to_pdf(latex_code: str) -> bytes:
     with tempfile.TemporaryDirectory() as tmpdir:
         # PDF生成用の一時フォルダへ、アプリ同梱の図形画像をコピーする。
-        source_diagram_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "diagrams")
-        if os.path.isdir(source_diagram_dir):
+        source_diagram_dir = find_diagram_directory()
+        if QUESTION_DIAGRAM_IMAGES:
+            if source_diagram_dir is None:
+                expected = Path(__file__).resolve().parent / "diagrams"
+                raise FileNotFoundError(
+                    "図形画像フォルダ diagrams が見つかりません。"
+                    f" app_updated_v24.py と同じ場所に diagrams フォルダを置いてください。"
+                    f"（確認した場所: {expected}）"
+                )
+
+            missing_images = [
+                image_name for image_name in QUESTION_DIAGRAM_IMAGES.values()
+                if not (source_diagram_dir / image_name).is_file()
+            ]
+            if missing_images:
+                raise FileNotFoundError(
+                    "diagrams フォルダ内に次の画像がありません: "
+                    + ", ".join(sorted(set(missing_images)))
+                )
+
             shutil.copytree(source_diagram_dir, os.path.join(tmpdir, "diagrams"))
 
         tex_path = os.path.join(tmpdir, "output.tex")
