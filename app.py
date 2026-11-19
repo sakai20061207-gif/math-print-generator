@@ -5,6 +5,7 @@ import os
 import random
 import subprocess
 import tempfile
+import shutil
 import fitz  # PyMuPDF
 from PIL import Image
 import streamlit as st
@@ -3874,14 +3875,79 @@ QUESTION_DIAGRAMS = {
 }
 
 
+
+# ---------------------------------------------------------
+# 問題文と画像ファイルの対応表
+# 画像はアプリと同じフォルダ内の diagrams/ に保存する。
+# ---------------------------------------------------------
+QUESTION_DIAGRAM_IMAGES = {
+    # 数学A「図形の性質」：三角形の辺の比
+    "線分ABを 3:1 に内分する点Pおよび外分する点Qを図示せよ。":
+        "naibun-ab-line.png",
+    "3点A, B, Cが並んでいるとき、点Cが線分ABを内分/外分する比を求めよ。":
+        "naibun-abc-line.png",
+
+    # 外心の角度問題（α・βで同じ図を使用）
+    "点Oが $\\triangle ABC$ の外心で $\\angle BAC=70^\\circ, \\angle ACO=30^\\circ$ のとき、角 $\\alpha$ を求めよ。":
+        "circumcenter-alpha-beta.png",
+    "点Oが $\\triangle ABC$ の外心で $\\angle BAC=70^\\circ, \\angle ACO=30^\\circ$ のとき、角 $\\beta$ を求めよ。":
+        "circumcenter-alpha-beta.png",
+
+    # 外角の二等分線の交点（傍心）
+    "頂点B, Cの外角の二等分線の交点Iは $\\angle A$ の二等分線上にあることを証明せよ。":
+        "excenter-angle-bisectors.png",
+
+    # 内心の角度問題（α・βで同じ図を使用）
+    "点Iが $\\triangle ABC$ の内心で $\\angle BAC=70^\\circ, \\angle ACI=30^\\circ$ のとき、角 $\\alpha$ を求めよ。":
+        "incenter-alpha-beta.png",
+    "点Iが $\\triangle ABC$ の内心で $\\angle BAC=70^\\circ, \\angle ACI=30^\\circ$ のとき、角 $\\beta$ を求めよ。":
+        "incenter-alpha-beta.png",
+
+    # 重心と高さ
+    "$\\triangle ABC$ の重心をG、A, Gから直線BCに下ろした垂線をAH, GKとするとき、比 $AH:GK$ を求めよ。":
+        "centroid-altitudes.png",
+
+    # チェバの定理（2つの図を含む画像）
+    "$\\triangle ABC$ 内の点Oに対し、内分比が与えられているとき $AR:RB$ を求めよ。":
+        "ceva-internal-two-cases.png",
+
+    # 三角形の外部にある点でのチェバの定理
+    "点Oが三角形の外部にある場合のチェバの定理において、$AR:RB=4:1, BP:PC=3:4$ のとき $CQ:QA$ を求めよ。":
+        "ceva-external.png",
+}
+
+
 def get_question_diagram(question_text: str) -> str:
-    """図形データが登録されている問題ならTikZコードを返す。"""
+    """問題に対応する画像または既存のTikZ図形コードを返す。"""
+    image_name = QUESTION_DIAGRAM_IMAGES.get(question_text)
+    if image_name:
+        return (
+            r"\begin{center}"
+            + "\n"
+            + r"\includegraphics[width=0.88\linewidth,height=6cm,keepaspectratio]{diagrams/"
+            + image_name
+            + r"}"
+            + "\n"
+            + r"\end{center}"
+        )
+
     diagram = QUESTION_DIAGRAMS.get(question_text)
     if diagram:
         return diagram
 
     # 問題文中の空白・改行の違いを吸収して照合する。
     normalized = " ".join(str(question_text).split())
+    for registered_text, image_name in QUESTION_DIAGRAM_IMAGES.items():
+        if " ".join(registered_text.split()) == normalized:
+            return (
+                r"\begin{center}"
+                + "\n"
+                + r"\includegraphics[width=0.88\linewidth,height=6cm,keepaspectratio]{diagrams/"
+                + image_name
+                + r"}"
+                + "\n"
+                + r"\end{center}"
+            )
     for registered_text, registered_diagram in QUESTION_DIAGRAMS.items():
         if " ".join(registered_text.split()) == normalized:
             return registered_diagram
@@ -3893,6 +3959,11 @@ def get_question_diagram(question_text: str) -> str:
 # ---------------------------------------------------------
 def compile_latex_to_pdf(latex_code: str) -> bytes:
     with tempfile.TemporaryDirectory() as tmpdir:
+        # PDF生成用の一時フォルダへ、アプリ同梱の図形画像をコピーする。
+        source_diagram_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "diagrams")
+        if os.path.isdir(source_diagram_dir):
+            shutil.copytree(source_diagram_dir, os.path.join(tmpdir, "diagrams"))
+
         tex_path = os.path.join(tmpdir, "output.tex")
         with open(tex_path, "w", encoding="utf-8") as f:
             f.write(latex_code)
@@ -4098,6 +4169,7 @@ else:
         \\documentclass[12pt]{{ltjsarticle}}
         \\usepackage[paper=a4paper,top=17mm,bottom=17mm,left=20mm,right=20mm]{{geometry}}
         \\usepackage{{amsmath,amssymb}}
+        \\usepackage{{graphicx}}
         \\usepackage{{tikz}}
         \\usetikzlibrary{{angles,quotes}}
         \\usepackage{{enumitem}}
