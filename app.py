@@ -3543,8 +3543,8 @@ QUESTION_DIAGRAMS = {
         % (2)
         \begin{scope}[xshift=4.0cm]
             \coordinate (Ob) at (0,0);
-            \coordinate (A2) at ({1.35*cos(230)},{1.35*sin(230)});
-            \coordinate (B2) at ({1.35*cos(310)},{1.35*sin(310)});
+            \coordinate (A2) at ({1.35*cos(246)},{1.35*sin(246)});
+            \coordinate (B2) at ({1.35*cos(294)},{1.35*sin(294)});
             \coordinate (C2) at ({1.35*cos(30)},{1.35*sin(30)});
             \draw[thick] (Ob) circle (1.35);
             \draw[thick] (Ob)--(A2);
