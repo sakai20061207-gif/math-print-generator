@@ -3516,7 +3516,7 @@ def render_pdf_preview_and_print(pdf_bytes: bytes):
 QUESTION_DIAGRAMS = {
     r"中心角と円周角の図において、角 $\theta$ を求めよ。": r"""
     \begin{center}
-    \begin{tikzpicture}[scale=0.92, line cap=round, line join=round]
+    \begin{tikzpicture}[scale=1.5, line cap=round, line join=round]
         % (1)
         \begin{scope}[xshift=0cm]
             \coordinate (Oa) at (0,0);
@@ -3528,41 +3528,43 @@ QUESTION_DIAGRAMS = {
             \draw[thick] (A)--(B)--(D)--(A);
             \draw[thick] (A)--(C)--(D);
             \fill (Oa) circle (1.7pt);
-            \node[above left] at (A) {$A$};
-            \node[left] at (B) {$B$};
-            \node[below] at (C) {$C$};
-            \node[right] at (D) {$D$};
-            \node[below] at (Oa) {$O$};
-            \pic[draw, angle radius=0.22cm] {angle=A--C--D};
-            \pic[draw, angle radius=0.25cm] {angle=B--D--A};
-            \node at (0.12,-0.91) {$66^\circ$};
-            \node at (1.02,0.34) {$\theta$};
+            \node[above left] at (A) {A};
+            \node[left] at (B) {B};
+            \node[below] at (C) {C};
+            \node[right] at (D) {D};
+            \node[below] at (Oa) {O};
+            % 反時計回り(D--C--A, A--D--B)に修正
+            \pic[draw, angle radius=0.22cm] {angle=D--C--A};
+            \pic[draw, angle radius=0.25cm] {angle=A--D--B};
+            \node at (0.37,-0.95) {$66^\circ$};
+            \node at (0.95,0.12) {$\theta$};
             \node at (-1.85,1.25) {(1)};
         \end{scope}
         % (2)
         \begin{scope}[xshift=4.0cm]
             \coordinate (Ob) at (0,0);
-            \coordinate (A2) at ({1.35*cos(220)},{1.35*sin(220)});
-            \coordinate (B2) at ({1.35*cos(300)},{1.35*sin(300)});
-            \coordinate (C2) at ({1.35*cos(45)},{1.35*sin(45)});
+            \coordinate (A2) at ({1.35*cos(230)},{1.35*sin(230)});
+            \coordinate (B2) at ({1.35*cos(310)},{1.35*sin(310)});
+            \coordinate (C2) at ({1.35*cos(30)},{1.35*sin(30)});
             \draw[thick] (Ob) circle (1.35);
             \draw[thick] (Ob)--(A2);
             \draw[thick] (Ob)--(B2);
             \draw[thick] (A2)--(B2);
             \draw[thick] (A2)--(C2)--(B2);
             \fill (Ob) circle (1.7pt);
-            \node[above] at (Ob) {$O$};
-            \node[below left] at (A2) {$A$};
-            \node[below right] at (B2) {$B$};
-            \node[above right] at (C2) {$C$};
-            \pic[draw, angle radius=0.22cm] {angle=A2--B2--Ob};
+            \node[above] at (Ob) {O};
+            \node[below left] at (A2) {A};
+            \node[below right] at (B2) {B};
+            \node[above right] at (C2) {C};
+            % 反時計回り(Ob--B2--A2)に修正
+            \pic[draw, angle radius=0.22cm] {angle=Ob--B2--A2};
             \pic[draw, angle radius=0.25cm] {angle=A2--C2--B2};
-            \node at (0.37,-0.86) {$62^\circ$};
-            \node at (1.02,0.56) {$\theta$};
+            \node at (0.37,-0.85) {$62^\circ$};
+            \node at (0.92,0.32) {$\theta$};
             \node at (-1.85,1.25) {(2)};
         \end{scope}
     \end{tikzpicture}
-    \end{center}
+\end{center}
     """,
 }
 
